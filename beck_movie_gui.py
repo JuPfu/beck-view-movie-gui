@@ -396,7 +396,7 @@ class GroupLayout(ttk.Frame):
         async def run_digitization():
             filepath = Path.home().joinpath('PycharmProjects',
                                             'beck-view-movie',
-                                            'digitize.cmd' if self.windows else 'beck-view-movie')
+                                            'assemble_film.cmd' if self.windows else 'beck-view-movie')
 
             self.fps = self.preferences.fps.get()
             self.date = f"{ttk.datetime.now():%Y_%m_%d}"
@@ -411,15 +411,15 @@ class GroupLayout(ttk.Frame):
 
             command = [
                 str(filepath),
-                f"--input_path {self.input_directory.input_directory_path.get()}",
-                f"--output_path {self.output_directory.output_directory_path.get()}",
-                f"--name {self.filename}",
-                f"--output_format {self.preferences.film_wrapper.get()}",
-                f"--codec {self.preferences.film_codec.get()}",
-                f"--width_height {self.width} {self.height}",
-                f"--frames_per_second {self.fps}",
-                f"--number_of_workers {self.threads}",
-                f"--batch_size {self.batch}"
+                f"--input_path={self.input_directory.input_directory_path.get()}",
+                f"--output_path={self.output_directory.output_directory_path.get()}",
+                f"--name={self.filename}",
+                f"--output_format={self.preferences.film_wrapper.get()}",
+                f"--codec={self.preferences.film_codec.get()}",
+                f"--width_height={self.width} {self.height}",
+                f"--frames_per_second={self.fps}",
+                f"--number_of_workers={self.threads}",
+                f"--batch_size={self.batch}"
             ]
             if self.preferences.flip_vertical.get():
                 command.append("--flip_vertical")
@@ -435,7 +435,7 @@ class GroupLayout(ttk.Frame):
                         *command,
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.PIPE,
-                        creationflags=subprocess.REALTIME_PRIORITY_CLASS | subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
+                        creationflags= subprocess.REALTIME_PRIORITY_CLASS | subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
                     )
                 else:
                     self.process = await asyncio.create_subprocess_exec(

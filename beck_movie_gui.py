@@ -505,7 +505,7 @@ class Application(ttk.Window):
         self.windows = platform.system() == "Windows"
 
         self.minsize(width=1080, height=800)
-        self.geometry("1080x800")
+        self.geometry("1180x800")
         self.title("Beck View Movie GUI")
         self.option_add("*tearOff", False)
 

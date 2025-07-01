@@ -416,7 +416,7 @@ class GroupLayout(ttk.Frame):
                 f"--name={self.filename}",
                 f"--output_format={self.preferences.film_wrapper.get()}",
                 f"--codec={self.preferences.film_codec.get()}",
-                f"--width_height={self.width} {self.height}",
+                # f"--width_height={self.width} {self.height}",
                 f"--frames_per_second={self.fps}",
                 f"--number_of_workers={self.threads}",
                 f"--batch_size={self.batch}"

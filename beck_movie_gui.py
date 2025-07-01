@@ -416,7 +416,7 @@ class GroupLayout(ttk.Frame):
                 f"--name={self.filename}",
                 f"--output_format={self.preferences.film_wrapper.get()}",
                 f"--codec={self.preferences.film_codec.get()}",
-                # f"--width_height={self.width} {self.height}",
+                f"--width_height={self.width}x{self.height}",
                 f"--frames_per_second={self.fps}",
                 f"--number_of_workers={self.threads}",
                 f"--batch_size={self.batch}"
@@ -427,6 +427,9 @@ class GroupLayout(ttk.Frame):
                 command.append("--flip_horizontal")
             if self.preferences.scale_up.get():
                 command.append("--scale_up")
+
+            command.append("--gui")
+
             self.subprocess_output.text_output.insert(tkinter.END,
                                                       f"Beck-View_Movie - Beck-View-Movie wird mit folgenden Parametern gestartet: {command}\n")
             try:

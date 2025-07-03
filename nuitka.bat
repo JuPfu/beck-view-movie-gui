@@ -1,0 +1,1 @@
+                                                             python -m nuitka  --standalone --onefile --enable-plugin=tk-inter --windows-console-mode=disable --windows-icon-from-ico=beck-view-digitize.png -o "beck-view-movie-gui" beck-view-movie-gui.py

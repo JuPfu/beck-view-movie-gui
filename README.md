@@ -3,7 +3,8 @@
 The Beck-View-Movie-gui App supplies a user-friendly interface to configure the various settings for the Beck-View-Movie Application, such as output directory of the generated movie, the (base-)name of the generated movie, the movie's resolution, codec, format, frames per second, and other technical attributes. It is built using ttkbootstrap for a modern and consistent look and feel across different operating systems.
 
 ![Beck View Movie GUI](./assets/img/beck-view-movie-gui.png)
-beck-view-movie-gui showing log-information after successfully finished assembling of digitised images.
+beck-view-movie-gui showing log-information after it successfully has finished assembling 2163 digitised images into a movie.
+
 ---
 
 ## 🚀 Features
@@ -13,7 +14,7 @@ beck-view-movie-gui showing log-information after successfully finished assembli
 * Allows users to:
 
   * Select **input image folders**.
-  * Set **output video file paths**.
+  * Set **output video file path**.
   * Configure video parameters such as:
     * **Vertical or horizontal mirroring** of digitised images
     * **Frame rate**
@@ -21,8 +22,8 @@ beck-view-movie-gui showing log-information after successfully finished assembli
     * **Codec options**
     * **Compression settings**
   * Configure performance options such as:
-    * Number of **Parallel Threads** to run
-    * **Batch-size of Image Frames** passed to each thread
+    * Number of **parallel Threads** to run
+    * **Batch-size of Image frames** passed to each thread
 * Assembles the selected values into a valid **command-line call**.
 * On clicking **“Beck-View-Movie starten”**, the GUI launches `beck-view-movie` as a **subprocess** with all arguments passed correctly.
 * Displays the **real-time console output** of the process in the GUI for user feedback.

@@ -1,8 +1,8 @@
 # Beck View Movie GUI
 
-A user-friendly front‑end for the **beck‑view‑movie** tool—a GUI wrapper that allows you to easily select images and generate video files from them, similar in concept to **beck-view-gui**, which wraps **beck-view-digitalize**.
+The Beck-View-Movie-gui App supplies a user-friendly interface to configure the various settings for the Beck-View-Movie Application, such as output directory of the generated movie, the (base-)name of the generated movie, the movie's resolution, codec, format, frames per second, and other technical attributes. It is built using ttkbootstrap for a modern and consistent look and feel across different operating systems.
 
-![Beck View GUI](./assets/img/beck-view-movie-gui.png)
+![Beck View Movie GUI](./assets/img/beck-view-movie-gui.png)
 beck-view-movie-gui showing log-information after successfully finished assembling of digitised images.
 ---
 

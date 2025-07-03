@@ -5,9 +5,6 @@ A user-friendly front‑end for the **beck‑view‑movie** tool—a GUI wrapper
 ![Beck View GUI](./assets/img/beck-view-movie-gui.png)
 beck-view-movie-gui showing log-information after successfully finished assembling of digitised images.
 ---
-Thank you—that’s very clear and helpful. Based on your clarification, here’s a corrected and more precise **Features** section for the README:
-
----
 
 ## 🚀 Features
 
@@ -18,7 +15,7 @@ Thank you—that’s very clear and helpful. Based on your clarification, here�
   * Select **input image folders**.
   * Set **output video file paths**.
   * Configure video parameters such as:
-    * **Vertical or Horizontal mirroring** of digitised images
+    * **Vertical or horizontal mirroring** of digitised images
     * **Frame rate**
     * **Resolution scaling**
     * **Codec options**
@@ -37,7 +34,7 @@ Thank you—that’s very clear and helpful. Based on your clarification, here�
 
 - Python **3.12+**
 - Dependencies listed in `requirements.txt` (GUI framework, subprocess handling, etc.)
-- Python access to [**beck-view-movie**](https://github.com/JuPfu/beck-view-movie)
+- [**beck-view-movie**](https://github.com/JuPfu/beck-view-movie) is built
 
 ---
 
@@ -60,18 +57,10 @@ pip install -r requirements.txt
    python beck_view_movie_gui.py
    ```
 
-2. Configure options:
+2. Generate the video:
 
-   * Choose the source **image folder**.
-   * Set **output file** name and destination.
-   * Define **frame rate**, **codec**, and playback options.
-   * Select **image range** (start/end indexes).
-   * Preview using the “Preview” button (if supported).
-
-3. Generate the video:
-
-   * Click **"Start Video Build"**. Log output appears in the GUI.
-   * To stop prematurely, click **"Stop"** (subprocess is terminated cleanly).
+   * Click **"Beck-View-Movie starten"**. Log output appears in the GUI.
+   * To stop prematurely, click **"Beck-View-Movie stoppen"** (subprocess is terminated cleanly).
 
 ---
 

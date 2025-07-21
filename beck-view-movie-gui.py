@@ -245,7 +245,7 @@ class Preferences(ttk.LabelFrame):
         self.film_codec.grid(row=0, column=3, padx=(0, 10), pady=(5, 5), sticky="ew")
         self.film_codec.current(0)
         ToolTip(self.film_codec,
-                text="Codec legt die interne Kodierung fest. Damit werden Qualität und Größe der Ausgabedatei (Komprimierung) beeinflußt.",
+                text="Codec legt die interne Kodierung fest. Damit werden Qualität und Größe der Ausgabedatei (Komprimierung) beeinflusst.",
                 bootstyle="INFO, INVERSE")
 
         self.film_resolution_values = [

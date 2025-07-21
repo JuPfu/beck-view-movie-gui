@@ -78,7 +78,7 @@ class FrameOutputDirectory(ttk.LabelFrame):
         self.filename_label.grid(row=0, column=0, padx=(10, 10), pady=(10, 10), sticky="ew")
 
         self.filename = tkinter.StringVar()
-        self.entry = ttk.Entry(self, textvariable=self.filename)
+        self.entry = ttk.Entry(self, textvariable=self.filename, font=beck_view_font)
 
         self.filename.set("beck-view-movie")
         self.entry.grid(row=0, column=1, padx=(0, 0), pady=(10, 10), sticky="ew")
@@ -151,6 +151,10 @@ class Preferences(ttk.LabelFrame):
         list_font = ttk.font.Font(family="Helvetica", size=14)
         self.master.option_add("*TCombobox*Listbox*Font", list_font)
 
+        # increase font size for TCheckbutton
+        s = ttk.Style()
+        s.configure('Beck-View_Movie-GUI.TCheckbutton', font=beck_view_font)
+
         self.configure(borderwidth=3, text="Einstellungen", relief=SOLID)
 
         self.logo = ttk.PhotoImage(file="beck-view-movie-logo.png")
@@ -164,7 +168,7 @@ class Preferences(ttk.LabelFrame):
                                                          onvalue=True, offvalue=False,
                                                          variable=self.flip_vertical,
                                                          padding="5  10",
-                                                         style='beck-view-gui.TCheckbutton'
+                                                         style='Beck-View_Movie-GUI.TCheckbutton'
                                                          )
         self.flip_vertical_checkbutton.grid(row=0, column=1, padx=(5, 0), pady=(5, 5), sticky="w")
         ToolTip(self.flip_vertical_checkbutton,
@@ -178,26 +182,26 @@ class Preferences(ttk.LabelFrame):
                                                            onvalue=True, offvalue=False,
                                                            variable=self.flip_horizontal,
                                                            padding="5  10",
-                                                           style='beck-view-gui.TCheckbutton'
+                                                           style='Beck-View_Movie-GUI.TCheckbutton'
                                                            )
         self.flip_horizontal_checkbutton.grid(row=0, column=2, padx=(15, 0), pady=(5, 5), sticky="w")
         ToolTip(self.flip_horizontal_checkbutton,
                 text="Alle Bilder des Films an der horizontalen Bildachse spiegeln.",
                 bootstyle="INFO, INVERSE")
 
-        self.scale_up = tkinter.BooleanVar()
-        self.scale_up.set(False)
-
-        self.scale_up_checkbutton = ttk.Checkbutton(self, text="Hochskalieren",
-                                                    onvalue=True, offvalue=False,
-                                                    variable=self.scale_up,
-                                                    padding="5  10",
-                                                    style='beck-view-gui.TCheckbutton'
-                                                    )
-        self.scale_up_checkbutton.grid(row=0, column=3, padx=(120, 0), pady=(5, 5), sticky="w")
-        ToolTip(self.scale_up_checkbutton,
-                text="Mit ESPCN Modell hochskalieren auf 3840 x 2160 Pixel.",
-                bootstyle="INFO, INVERSE")
+        # self.scale_up = tkinter.BooleanVar()
+        # self.scale_up.set(False)
+        #
+        # self.scale_up_checkbutton = ttk.Checkbutton(self, text="Hochskalieren",
+        #                                             onvalue=True, offvalue=False,
+        #                                             variable=self.scale_up,
+        #                                             padding="5  10",
+        #                                             style='beck-view-gui.TCheckbutton'
+        #                                             )
+        # self.scale_up_checkbutton.grid(row=0, column=3, padx=(120, 0), pady=(5, 5), sticky="w")
+        # ToolTip(self.scale_up_checkbutton,
+        #         text="Mit ESPCN Modell hochskalieren auf 3840 x 2160 Pixel.",
+        #         bootstyle="INFO, INVERSE")
 
         self.panel = ttk.Frame(self, borderwidth=0)
         self.panel.grid(row=1, column=1, rowspan=2, columnspan=4, padx=(0, 0), pady=(0, 0), sticky="ewns")
@@ -505,11 +509,11 @@ class Application(ttk.Window):
         self.windows = platform.system() == "Windows"
 
         self.minsize(width=1080, height=800)
-        self.geometry("1180x800")
+        self.geometry("1280x800")
         self.title("Beck View Movie GUI")
         self.option_add("*tearOff", False)
 
-        self.iconbitmap("beck-view_movie.ico")
+        self.iconbitmap("beck-view-movie-gui.ico")
 
         self.menu = MainMenu(self)
         self.config(menu=self.menu)

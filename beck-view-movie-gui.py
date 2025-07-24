@@ -189,20 +189,6 @@ class Preferences(ttk.LabelFrame):
                 text="Alle Bilder des Films an der horizontalen Bildachse spiegeln.",
                 bootstyle="INFO, INVERSE")
 
-        # self.scale_up = tkinter.BooleanVar()
-        # self.scale_up.set(False)
-        #
-        # self.scale_up_checkbutton = ttk.Checkbutton(self, text="Hochskalieren",
-        #                                             onvalue=True, offvalue=False,
-        #                                             variable=self.scale_up,
-        #                                             padding="5  10",
-        #                                             style='beck-view-gui.TCheckbutton'
-        #                                             )
-        # self.scale_up_checkbutton.grid(row=0, column=3, padx=(120, 0), pady=(5, 5), sticky="w")
-        # ToolTip(self.scale_up_checkbutton,
-        #         text="Mit ESPCN Modell hochskalieren auf 3840 x 2160 Pixel.",
-        #         bootstyle="INFO, INVERSE")
-
         self.panel = ttk.Frame(self, borderwidth=0)
         self.panel.grid(row=1, column=1, rowspan=2, columnspan=4, padx=(0, 0), pady=(0, 0), sticky="ewns")
 
@@ -249,6 +235,7 @@ class Preferences(ttk.LabelFrame):
                 bootstyle="INFO, INVERSE")
 
         self.film_resolution_values = [
+            "automatic",
             "1600 x 1200",
             "1920 x 1080",
             "2048 x 1536",
@@ -263,9 +250,9 @@ class Preferences(ttk.LabelFrame):
                                             values=self.film_resolution_values,
                                             state=ttk.READONLY)
         self.film_resolution.grid(row=1, column=1, padx=(0, 10), pady=(5, 5), sticky="ew")
-        self.film_resolution.current(1)
+        self.film_resolution.current(0)
         ToolTip(self.film_resolution,
-                text="Auflösung in horizontaler und vertikaler Richtung.",
+                text="Auflösung in horizontaler und vertikaler Richtung. 'automatic' ermittelt die Auflösung selbständig",
                 bootstyle="INFO, INVERSE")
 
         self.fps_label = ttk.Label(self.panel, font=beck_view_font,
@@ -405,13 +392,13 @@ class GroupLayout(ttk.Frame):
             self.fps = self.preferences.fps.get()
             self.date = f"{ttk.datetime.now():%Y_%m_%d}"
             self.filename = f"{self.output_directory.filename.get()}_{self.fps}fps_{self.date}"
-            self.width, self.height = self.preferences.film_resolution.get().split(" x ", 2)
+
+            film_resolution = self.preferences.film_resolution.get()
+            if film_resolution != "automatic":
+                film_resolution = film_resolution.get().replace(' ', '')
 
             self.threads = self.technical_attributes.threads.get()
             self.batch = self.technical_attributes.batch.get()
-            if self.preferences.scale_up.get():
-                self.threads = 1
-                self.batch = 1
 
             command = [
                 str(filepath),
@@ -420,7 +407,7 @@ class GroupLayout(ttk.Frame):
                 f"--name={self.filename}",
                 f"--output_format={self.preferences.film_wrapper.get()}",
                 f"--codec={self.preferences.film_codec.get()}",
-                f"--width_height={self.width}x{self.height}",
+                f"--width_height={film_resolution}",
                 f"--frames_per_second={self.fps}",
                 f"--number_of_workers={self.threads}",
                 f"--batch_size={self.batch}"
@@ -429,8 +416,6 @@ class GroupLayout(ttk.Frame):
                 command.append("--flip_vertical")
             if self.preferences.flip_horizontal.get():
                 command.append("--flip_horizontal")
-            if self.preferences.scale_up.get():
-                command.append("--scale_up")
 
             command.append("--gui")
 

@@ -265,6 +265,28 @@ class Preferences(ttk.LabelFrame):
                 text="Bilder pro Sekunde (FPS).\nWertebereich 18 bis 30.",
                 bootstyle="INFO, INVERSE")
 
+        self.film_tonemap_values = [
+            "kein Tone-Mapping",
+            "cinematic",
+            "natural",
+            "highlight",
+            "soft",
+            "vivid",
+            "neutral"
+        ]
+
+        self.film_tonemap_label = ttk.Label(self.panel, font=beck_view_font, text="Tone-Mapping")
+        self.film_tonemap_label.grid(row=0, column=4, padx=(30, 10), pady=(5, 5), sticky="ew")
+        self.film_tonemap = ttk.Combobox(self.panel,
+                                         font=beck_view_font,
+                                         values=self.film_tonemap_values,
+                                         state=ttk.READONLY)
+        self.film_tonemap.grid(row=0, column=5, padx=(0, 10), pady=(5, 5), sticky="ew")
+        self.film_tonemap.current(0)
+        ToolTip(self.film_tonemap,
+                text="Mit Tone Mapping oder Dynamikkompression wird die Kompression des Dynamikumfangs von Hochkontrastbildern (HDI) bezeichnet, also von digitalen Bildern mit hohem Helligkeitsumfang. Beim Tone Mapping wird der Kontrastumfang eines Hochkontrastbildes verringert, um es auf herkömmlichen Ausgabegeräten darstellen zu können.",
+                bootstyle="INFO, INVERSE")
+
 
 class SubprocessOutput(ttk.LabelFrame):
     def __init__(self, master):
@@ -417,6 +439,10 @@ class GroupLayout(ttk.Frame):
             if self.preferences.flip_horizontal.get():
                 command.append("--flip_horizontal")
 
+            tonemap_preset = self.preferences.film_tonemap.get()
+            if tonemap_preset != "kein Tone-Mapping":
+                command.append(f"--tone-mapper-preset={tonemap_preset}")
+
             command.append("--gui")
 
             self.subprocess_output.text_output.insert(tkinter.END,
@@ -493,7 +519,7 @@ class Application(ttk.Window):
 
         self.windows = platform.system() == "Windows"
 
-        self.minsize(width=1080, height=800)
+        self.minsize(width=1280, height=800)
         self.geometry("1280x800")
         self.title("Beck View Movie GUI")
         self.option_add("*tearOff", False)

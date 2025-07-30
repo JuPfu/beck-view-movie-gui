@@ -442,6 +442,7 @@ class GroupLayout(ttk.Frame):
             tonemap_preset = self.preferences.film_tonemap.get()
             if tonemap_preset != "kein Tone-Mapping":
                 command.append(f"--tone-mapper-preset={tonemap_preset}")
+                command.append(f"--bracketing")
 
             command.append("--gui")
 

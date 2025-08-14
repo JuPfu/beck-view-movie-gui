@@ -409,7 +409,7 @@ class GroupLayout(ttk.Frame):
         async def run_digitization():
             filepath = Path.home().joinpath('PycharmProjects',
                                             'beck-view-movie',
-                                            'assemble_film.cmd' if self.windows else 'beck-view-movie')
+                                            'assemble-film.cmd' if self.windows else 'beck-view-movie')
 
             self.fps = self.preferences.fps.get()
             self.date = f"{ttk.datetime.now():%Y_%m_%d}"
@@ -424,20 +424,20 @@ class GroupLayout(ttk.Frame):
 
             command = [
                 str(filepath),
-                f"--input_path={self.input_directory.input_directory_path.get()}",
-                f"--output_path={self.output_directory.output_directory_path.get()}",
+                f"--input-path={self.input_directory.input_directory_path.get()}",
+                f"--output-path={self.output_directory.output_directory_path.get()}",
                 f"--name={self.filename}",
-                f"--output_format={self.preferences.film_wrapper.get()}",
+                f"--output-format={self.preferences.film_wrapper.get()}",
                 f"--codec={self.preferences.film_codec.get()}",
-                f"--width_height={film_resolution}",
-                f"--frames_per_second={self.fps}",
-                f"--number_of_workers={self.threads}",
-                f"--batch_size={self.batch}"
+                f"--width-height={film_resolution}",
+                f"--frames-per-second={self.fps}",
+                f"--number-of-workers={self.threads}",
+                f"--batch-size={self.batch}"
             ]
             if self.preferences.flip_vertical.get():
-                command.append("--flip_vertical")
+                command.append("--flip-vertical")
             if self.preferences.flip_horizontal.get():
-                command.append("--flip_horizontal")
+                command.append("--flip-horizontal")
 
             tonemap_preset = self.preferences.film_tonemap.get()
             if tonemap_preset != "kein Tone-Mapping":

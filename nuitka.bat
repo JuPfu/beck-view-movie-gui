@@ -1,1 +1,2 @@
+del /F /S /Q  beck-view-movie-gui.build beck-view-movie-gui.dist beck-view-movie-gui.onefile-build
 python -m nuitka  --standalone --onefile --enable-plugin=tk-inter --windows-console-mode=disable --windows-icon-from-ico=beck-view-movie-logo.png -o "beck-view-movie-gui" beck-view-movie-gui.py

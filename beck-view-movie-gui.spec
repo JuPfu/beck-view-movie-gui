@@ -49,11 +49,12 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=True,  # change to False if you want a GUI app
+    console=False,  # change to False if you want a GUI app
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon='beck-view-movie-gui.ico'
 )
 
 

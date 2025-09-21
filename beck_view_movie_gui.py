@@ -1,4 +1,5 @@
 import asyncio
+import sys
 import os
 import platform
 import signal
@@ -24,7 +25,7 @@ class FrameInputDirectory(ttk.LabelFrame):
         path = FrameInputDirectory.askdirectory(title="Verzeichnis mit digitalisierten Bildern",
                                                 initialdir=".",
                                                 mustexist=must_exist)
-        return r'{}'.format(path)
+        return r'{}'.format(path) if path else r'{}'.format(Path.cwd())
 
     def __init__(self, master):
         super().__init__(master)
@@ -525,7 +526,11 @@ class Application(ttk.Window):
         self.title("Beck View Movie GUI")
         self.option_add("*tearOff", False)
 
-        self.iconbitmap("beck-view-movie-gui.ico")
+        if sys.platform.startswith("win"):
+            self.iconbitmap("beck-view-gui.ico")
+        else:
+            logo = tkinter.PhotoImage(file="beck-view-movie-logo.png")
+            self.iconphoto(True, logo)
 
         self.menu = MainMenu(self)
         self.config(menu=self.menu)

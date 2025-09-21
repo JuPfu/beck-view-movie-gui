@@ -1,6 +1,9 @@
-mypy>=1.17.1
+mypy>=1.18.2
 mypy-extensions>=1.1.0
 ttkbootstrap>=1.14.2
 tk>=0.1.0
+setuptools>=80.9.0
+cython>=3.1.4
+pyinstaller>=6.16.0
 imageio>=2.37.0
-nuitka>=2.7.12
+nuitka>=2.7.16

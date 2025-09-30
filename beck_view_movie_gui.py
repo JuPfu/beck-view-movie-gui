@@ -1,5 +1,4 @@
 import asyncio
-import sys
 import os
 import platform
 import signal
@@ -197,13 +196,7 @@ class Preferences(ttk.LabelFrame):
                                             font=beck_view_font,
                                             text="Ausgabeformat (Wrapper)")
         self.film_wrapper_label.grid(row=0, column=0, padx=(10, 10), pady=(5, 5), sticky="ew")
-        self.film_wrapper_values = [
-            "avi",
-            "mov",
-            "mp4",
-            "mv4",
-            "wmf",
-        ]
+        self.film_wrapper_values = ["avi", "mkv", "mov", "mp4", "mv4", "wmf"]
 
         self.film_wrapper = ttk.Combobox(self.panel,
                                          font=beck_view_font,
@@ -216,12 +209,7 @@ class Preferences(ttk.LabelFrame):
                 text="Das Ausgabeformat ist eine Hülle um das interne Format des generierten Films.",
                 bootstyle="INFO, INVERSE")
 
-        self.film_codec_values = [
-            "avc1",
-            "h263",
-            "h264",
-            "mp4v"
-        ]
+        self.film_codec_values = ["avc1", "mp4v", "h263", "h264", "h265", "mjpg", "xvid", "x264"]
 
         self.film_codec_label = ttk.Label(self.panel, font=beck_view_font, text="Codec")
         self.film_codec_label.grid(row=0, column=2, padx=(30, 10), pady=(5, 5), sticky="ew")

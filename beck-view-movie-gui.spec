@@ -54,7 +54,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='beck-view-movie-gui.ico'
+    icon="C:\\Users\\Peter lokal\\PycharmProjects\\beck-view-movie-gui\\beck-view-movie-logo.png"
 )
 
 

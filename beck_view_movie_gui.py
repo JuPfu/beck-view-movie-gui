@@ -1,4 +1,5 @@
 import asyncio
+import sys
 import os
 import platform
 import signal
@@ -10,21 +11,22 @@ from pathlib import Path
 
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-from ttkbootstrap.scrolled import ScrolledText
-from ttkbootstrap.tooltip import ToolTip
+from ttkbootstrap.widgets.scrolled import ScrolledText
+from ttkbootstrap.widgets.tooltip import ToolTip
 
 beck_view_font = ("Helvetica", 14)
 
 
-class FrameInputDirectory(ttk.LabelFrame):
+class FrameInputDirectory(ttk.Labelframe):
     from tkinter.filedialog import askdirectory
 
     @staticmethod
     def show_directory_dialog(must_exist) -> str:
+        p = str(Path('~', 'Filme').expanduser())
         path = FrameInputDirectory.askdirectory(title="Verzeichnis mit digitalisierten Bildern",
-                                                initialdir=".",
+                                                initialdir=p,
                                                 mustexist=must_exist)
-        return r'{}'.format(path) if path else r'{}'.format(Path.cwd())
+        return r'{}'.format(path) if path else r'{}'.format(p)
 
     def __init__(self, master):
         super().__init__(master)
@@ -33,8 +35,8 @@ class FrameInputDirectory(ttk.LabelFrame):
         self.input_directory_label = ttk.Label(self, text="Verzeichnis", font=beck_view_font)
         self.input_directory_label.grid(row=0, column=0, padx=(10, 10), pady=(10, 10), sticky="ew")
         self.input_directory_path = ttk.Entry(self, font=beck_view_font, takefocus=0)
-        self.input_directory_path.insert(0, os.getcwd())
-        self.input_directory_path.configure(state=ttk.READONLY)
+        self.input_directory_path.insert(0, str(Path('~', 'Filme').expanduser()))
+        self.input_directory_path.configure(state="readonly")
         self.input_directory_path.grid(row=0, column=1, pady=(10, 10), sticky="ew")
 
         s = ttk.Style()
@@ -50,21 +52,21 @@ class FrameInputDirectory(ttk.LabelFrame):
 
     def input_directory_button_callback(self):
         path = FrameInputDirectory.show_directory_dialog(True)
-        self.input_directory_path.configure(state=ttk.NORMAL)
+        self.input_directory_path.configure(state="normal")
         text = self.input_directory_path.get()
         if len(path) > 0:
             self.input_directory_path.delete(0, len(text))
             self.input_directory_path.insert(index=0, string=path)
-        self.input_directory_path.configure(state=ttk.READONLY)
+        self.input_directory_path.configure(state="readonly")
 
 
-class FrameOutputDirectory(ttk.LabelFrame):
+class FrameOutputDirectory(ttk.Labelframe):
     from tkinter.filedialog import askdirectory
 
     @staticmethod
     def show_directory_dialog(must_exist) -> str:
         path = FrameOutputDirectory.askdirectory(title="Ausgabeverzeichnis für den generierten Film festlegen",
-                                                 initialdir=".",
+                                                 initialdir=str(Path('~', 'Filme').expanduser()),
                                                  mustexist=must_exist)
         return r'{}'.format(path)
 
@@ -86,8 +88,8 @@ class FrameOutputDirectory(ttk.LabelFrame):
         self.output_directory_label = ttk.Label(self, text="Verzeichnis", font=beck_view_font)
         self.output_directory_label.grid(row=1, column=0, padx=(10, 10), pady=(10, 10), sticky="ew")
         self.output_directory_path = ttk.Entry(self, font=beck_view_font, takefocus=0)
-        self.output_directory_path.insert(0, os.getcwd())
-        self.output_directory_path.configure(state=ttk.READONLY)
+        self.output_directory_path.insert(0, str(Path('~', 'Filme').expanduser()))
+        self.output_directory_path.configure(state="readonly")
         self.output_directory_path.grid(row=1, column=1, pady=(10, 10), sticky="ew")
 
         s = ttk.Style()
@@ -103,15 +105,15 @@ class FrameOutputDirectory(ttk.LabelFrame):
 
     def directory_button_callback(self):
         path = FrameOutputDirectory.show_directory_dialog(False)
-        self.output_directory_path.configure(state=ttk.NORMAL)
+        self.output_directory_path.configure(state="normal")
         text = self.output_directory_path.get()
         if len(path) > 0:
             self.output_directory_path.delete(0, len(text))
             self.output_directory_path.insert(index=0, string=path)
-        self.output_directory_path.configure(state=ttk.READONLY)
+        self.output_directory_path.configure(state="readonly")
 
 
-class TechnicalAttributes(ttk.LabelFrame):
+class TechnicalAttributes(ttk.Labelframe):
     def __init__(self, master):
         super().__init__(master)
 
@@ -121,7 +123,7 @@ class TechnicalAttributes(ttk.LabelFrame):
         self.batch_label = ttk.Label(self, font=beck_view_font,
                                      text="Anzahl Bilder, die jedem Prozess übergeben werden")
         self.batch_label.grid(row=row, column=0, padx=(10, 0), pady=(10, 10), sticky="ew")
-        self.batch = ttk.Spinbox(self, font=beck_view_font, from_=1, to=99, state=ttk.READONLY)
+        self.batch = ttk.Spinbox(self, font=beck_view_font, from_=1, to=99, state="readonly")
         self.batch.grid(row=row, column=1, padx=(10, 10), pady=(10, 10), sticky="ew")
         self.batch.set(10)
         ToolTip(self.batch,
@@ -132,7 +134,7 @@ class TechnicalAttributes(ttk.LabelFrame):
         self.threads_label = ttk.Label(self, font=beck_view_font,
                                        text="Anzahl parallele Threads")
         self.threads_label.grid(row=row, column=2, padx=(10, 0), pady=(10, 10), sticky="ew")
-        self.threads = ttk.Spinbox(self, font=beck_view_font, from_=1, to=20, state=ttk.READONLY)
+        self.threads = ttk.Spinbox(self, font=beck_view_font, from_=1, to=20, state="readonly")
         self.threads.grid(row=row, column=3, padx=(10, 10), pady=(10, 10), sticky="ew")
         self.threads.set(8)
         ToolTip(self.threads,
@@ -143,17 +145,20 @@ class TechnicalAttributes(ttk.LabelFrame):
         self.panel.grid(row=row, column=4, rowspan=2, padx=(10, 10), pady=(10, 10), sticky="ewns")
 
 
-class Preferences(ttk.LabelFrame):
+class Preferences(ttk.Labelframe):
     def __init__(self, master):
         super().__init__(master)
 
         # increase font size for Listbox of Combobox
-        list_font = ttk.font.Font(family="Helvetica", size=14)
-        self.master.option_add("*TCombobox*Listbox*Font", list_font)
+        self.master.option_add("*TCombobox*Listbox*Font", beck_view_font)
 
         # increase font size for TCheckbutton
         s = ttk.Style()
-        s.configure('Beck-View_Movie-GUI.TCheckbutton', font=beck_view_font)
+        s.configure('Beck-View-Movie-GUI.TCheckbutton', font=beck_view_font)
+        s.map('Beck-View-Movie-GUI.TCheckbutton',
+              # font=[('focus', ('Helvetica', 14, 'italic'))],
+              background=[('focus', 'burlywood')],
+              )
 
         self.configure(borderwidth=3, text="Einstellungen", relief=SOLID)
 
@@ -168,7 +173,7 @@ class Preferences(ttk.LabelFrame):
                                                          onvalue=True, offvalue=False,
                                                          variable=self.flip_vertical,
                                                          padding="5  10",
-                                                         style='Beck-View_Movie-GUI.TCheckbutton'
+                                                         style='Beck-View-Movie-GUI.TCheckbutton'
                                                          )
         self.flip_vertical_checkbutton.grid(row=0, column=1, padx=(5, 0), pady=(5, 5), sticky="w")
         ToolTip(self.flip_vertical_checkbutton,
@@ -182,7 +187,7 @@ class Preferences(ttk.LabelFrame):
                                                            onvalue=True, offvalue=False,
                                                            variable=self.flip_horizontal,
                                                            padding="5  10",
-                                                           style='Beck-View_Movie-GUI.TCheckbutton'
+                                                           style='Beck-View-Movie-GUI.TCheckbutton'
                                                            )
         self.flip_horizontal_checkbutton.grid(row=0, column=2, padx=(15, 0), pady=(5, 5), sticky="w")
         ToolTip(self.flip_horizontal_checkbutton,
@@ -196,12 +201,18 @@ class Preferences(ttk.LabelFrame):
                                             font=beck_view_font,
                                             text="Ausgabeformat (Wrapper)")
         self.film_wrapper_label.grid(row=0, column=0, padx=(10, 10), pady=(5, 5), sticky="ew")
-        self.film_wrapper_values = ["avi", "mkv", "mov", "mp4", "mv4", "wmf"]
+        self.film_wrapper_values = [
+            "avi",
+            "mov",
+            "mp4",
+            "mv4",
+            "wmf",
+        ]
 
         self.film_wrapper = ttk.Combobox(self.panel,
                                          font=beck_view_font,
                                          values=self.film_wrapper_values,
-                                         state=ttk.READONLY)
+                                         state="readonly")
 
         self.film_wrapper.grid(row=0, column=1, padx=(0, 10), pady=(5, 5), sticky="ew")
         self.film_wrapper.current(2)
@@ -209,14 +220,19 @@ class Preferences(ttk.LabelFrame):
                 text="Das Ausgabeformat ist eine Hülle um das interne Format des generierten Films.",
                 bootstyle="INFO, INVERSE")
 
-        self.film_codec_values = ["avc1", "mp4v", "h263", "h264", "h265", "mjpg", "xvid", "x264"]
+        self.film_codec_values = [
+            "avc1",
+            "h263",
+            "h264",
+            "mp4v"
+        ]
 
         self.film_codec_label = ttk.Label(self.panel, font=beck_view_font, text="Codec")
         self.film_codec_label.grid(row=0, column=2, padx=(30, 10), pady=(5, 5), sticky="ew")
         self.film_codec = ttk.Combobox(self.panel,
                                        font=beck_view_font,
                                        values=self.film_codec_values,
-                                       state=ttk.READONLY)
+                                       state="readonly")
         self.film_codec.grid(row=0, column=3, padx=(0, 10), pady=(5, 5), sticky="ew")
         self.film_codec.current(0)
         ToolTip(self.film_codec,
@@ -237,7 +253,7 @@ class Preferences(ttk.LabelFrame):
         self.film_resolution = ttk.Combobox(self.panel,
                                             font=beck_view_font,
                                             values=self.film_resolution_values,
-                                            state=ttk.READONLY)
+                                            state="readonly")
         self.film_resolution.grid(row=1, column=1, padx=(0, 10), pady=(5, 5), sticky="ew")
         self.film_resolution.current(0)
         ToolTip(self.film_resolution,
@@ -247,7 +263,7 @@ class Preferences(ttk.LabelFrame):
         self.fps_label = ttk.Label(self.panel, font=beck_view_font,
                                    text="FPS")
         self.fps_label.grid(row=1, column=2, padx=(30, 0), pady=(5, 5), sticky="ew")
-        self.fps = ttk.Spinbox(self.panel, font=beck_view_font, from_=18, to=30, state=ttk.READONLY)
+        self.fps = ttk.Spinbox(self.panel, font=beck_view_font, from_=18, to=30, state="readonly")
         self.fps.grid(row=1, column=3, padx=(0, 10), pady=(10, 10), sticky="ew")
         self.fps.set(24)
         ToolTip(self.fps,
@@ -269,7 +285,7 @@ class Preferences(ttk.LabelFrame):
         self.film_tonemap = ttk.Combobox(self.panel,
                                          font=beck_view_font,
                                          values=self.film_tonemap_values,
-                                         state=ttk.READONLY)
+                                         state="readonly")
         self.film_tonemap.grid(row=0, column=5, padx=(0, 10), pady=(5, 5), sticky="ew")
         self.film_tonemap.current(0)
         ToolTip(self.film_tonemap,
@@ -277,7 +293,7 @@ class Preferences(ttk.LabelFrame):
                 bootstyle="INFO, INVERSE")
 
 
-class SubprocessOutput(ttk.LabelFrame):
+class SubprocessOutput(ttk.Labelframe):
     def __init__(self, master):
         super().__init__(master)
 
@@ -514,11 +530,7 @@ class Application(ttk.Window):
         self.title("Beck View Movie GUI")
         self.option_add("*tearOff", False)
 
-        if sys.platform.startswith("win"):
-            self.iconbitmap("beck-view-gui.ico")
-        else:
-            logo = tkinter.PhotoImage(file="beck-view-movie-logo.png")
-            self.iconphoto(True, logo)
+        self.iconbitmap("beck-view-movie-gui.ico")
 
         self.menu = MainMenu(self)
         self.config(menu=self.menu)

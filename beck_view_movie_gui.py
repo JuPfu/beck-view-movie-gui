@@ -7,6 +7,7 @@ import subprocess
 import time
 import tkinter
 from asyncio import Task
+from datetime import datetime
 from pathlib import Path
 
 import ttkbootstrap as ttk
@@ -417,7 +418,7 @@ class GroupLayout(ttk.Frame):
                                             'assemble-film.cmd' if self.windows else 'beck-view-movie')
 
             self.fps = self.preferences.fps.get()
-            self.date = f"{ttk.datetime.now():%Y_%m_%d}"
+            self.date = f"{datetime.now():%Y_%m_%d}"
             self.filename = f"{self.output_directory.filename.get()}_{self.fps}fps_{self.date}"
 
             film_resolution = self.preferences.film_resolution.get()

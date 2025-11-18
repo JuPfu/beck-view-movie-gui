@@ -1,5 +1,4 @@
 import asyncio
-import sys
 import os
 import platform
 import signal

@@ -220,15 +220,7 @@ class Preferences(ttk.Labelframe):
                 text="Das Ausgabeformat ist eine Hülle um das interne Format des generierten Films.",
                 bootstyle="INFO, INVERSE")
         self.film_codec_values = [
-            "asf",
-            "avc1",
-            "h263",
-            "h264",
-            "h265",
-            "mjpg",
-            "mp4v",
-            "wmv",
-            "xvid"
+            "avc1", "h263", "h264", "h265", "mjpg", "mpv4", "mss2", "wmv3", "wvp2", "xvid"
         ]
 
         self.film_codec_label = ttk.Label(self.panel, font=beck_view_font, text="Codec")

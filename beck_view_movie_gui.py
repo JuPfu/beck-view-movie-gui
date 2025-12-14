@@ -203,6 +203,7 @@ class Preferences(ttk.Labelframe):
         self.film_wrapper_label.grid(row=0, column=0, padx=(10, 10), pady=(5, 5), sticky="ew")
         self.film_wrapper_values = [
             "avi",
+            "mkv"
             "mov",
             "mp4",
             "mv4",
@@ -220,7 +221,7 @@ class Preferences(ttk.Labelframe):
                 text="Das Ausgabeformat ist eine Hülle um das interne Format des generierten Films.",
                 bootstyle="INFO, INVERSE")
         self.film_codec_values = [
-            "avc1", "h263", "h264", "h265", "mjpg", "mpv4", "mss2", "wmv3", "wvp2", "xvid"
+            "avc1", "h263", "h264", "h265", "mjpg", "mpv4", "xvid", "x264"
         ]
 
         self.film_codec_label = ttk.Label(self.panel, font=beck_view_font, text="Codec")

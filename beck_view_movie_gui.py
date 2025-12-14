@@ -203,7 +203,7 @@ class Preferences(ttk.Labelframe):
         self.film_wrapper_label.grid(row=0, column=0, padx=(10, 10), pady=(5, 5), sticky="ew")
         self.film_wrapper_values = [
             "avi",
-            "mkv"
+            "mkv",
             "mov",
             "mp4",
             "mv4",

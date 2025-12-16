@@ -382,14 +382,8 @@ class GroupLayout(ttk.Frame):
             timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M")
 
             quality = self.preferences.quality.get()
-
-            name = str(
-                filepath / (
-                    f"{self.output_directory.filename.get()}_{quality}_{self.fps}fps_{timestamp}"
-                )
-            )
-
-            self.fps = self.preferences.fps.get()
+            fps = self.preferences.fps.get()
+            name = str(f"{self.output_directory.filename.get()}_{quality}_{fps}fps_{timestamp}")
 
             film_resolution = self.preferences.film_resolution.get()
             if film_resolution != "automatic":
@@ -403,7 +397,7 @@ class GroupLayout(ttk.Frame):
                 f"--output-format={self.preferences.film_wrapper.get()}",
                 f"--quality={quality}",
                 f"--width-height={film_resolution}",
-                f"--frames-per-second={self.fps}"
+                f"--frames-per-second={fps}"
             ]
             if self.preferences.flip_vertical.get():
                 command.append("--flip-vertical")

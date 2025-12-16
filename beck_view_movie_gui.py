@@ -385,7 +385,7 @@ class GroupLayout(ttk.Frame):
 
             name = str(
                 filepath / (
-                    f"{self.output_directory.filename.get()}_{quality}_{self.fps}fps_{timestamp}.{self.output_format}"
+                    f"{self.output_directory.filename.get()}_{quality}_{self.fps}fps_{timestamp}"
                 )
             )
 

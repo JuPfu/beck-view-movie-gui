@@ -224,7 +224,7 @@ class Preferences(ttk.Labelframe):
         self.quality.grid(row=0, column=3, padx=(0, 10), pady=(5, 5), sticky="ew")
         self.quality.current(3)
         ToolTip(self.quality,
-                text="Das Qualität des generierten Films.",
+                text="Die Qualität des generierten Films. Aufwand der Erstellung wächst bei jeder Stufe von 'Preview' bis 'best'",
                 bootstyle="INFO, INVERSE")
 
         self.fps_label = ttk.Label(self.panel, font=beck_view_font,

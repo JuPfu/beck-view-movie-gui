@@ -6,7 +6,7 @@ import subprocess
 import time
 import tkinter
 from asyncio import Task
-from datetime import datetime
+
 from pathlib import Path
 
 import ttkbootstrap as ttk
@@ -113,38 +113,6 @@ class FrameOutputDirectory(ttk.Labelframe):
         self.output_directory_path.configure(state="readonly")
 
 
-class TechnicalAttributes(ttk.Labelframe):
-    def __init__(self, master):
-        super().__init__(master)
-
-        self.configure(borderwidth=3, text="Performance-Tuning", relief=SOLID)
-        row = 0
-
-        self.batch_label = ttk.Label(self, font=beck_view_font,
-                                     text="Anzahl Bilder, die jedem Prozess übergeben werden")
-        self.batch_label.grid(row=row, column=0, padx=(10, 0), pady=(10, 10), sticky="ew")
-        self.batch = ttk.Spinbox(self, font=beck_view_font, from_=1, to=99, state="readonly")
-        self.batch.grid(row=row, column=1, padx=(10, 10), pady=(10, 10), sticky="ew")
-        self.batch.set(10)
-        ToolTip(self.batch,
-                text="Anzahl Bilder die in einem `Paket`parallel verarbeitet werden. Beeinflusst die "
-                     "Verarbeitungs-geschwindigkeit.\nWertebereich 1 bis 99.",
-                bootstyle="INFO, INVERSE")
-
-        self.threads_label = ttk.Label(self, font=beck_view_font,
-                                       text="Anzahl parallele Threads")
-        self.threads_label.grid(row=row, column=2, padx=(10, 0), pady=(10, 10), sticky="ew")
-        self.threads = ttk.Spinbox(self, font=beck_view_font, from_=1, to=20, state="readonly")
-        self.threads.grid(row=row, column=3, padx=(10, 10), pady=(10, 10), sticky="ew")
-        self.threads.set(8)
-        ToolTip(self.threads,
-                text="Anzahl paralleler Threads die jeweils ein `Paket` verarbeiten. Beeinflusst die Konvertierungsgeschwindigkeit. Wertebereich 1 bis 20.",
-                bootstyle="INFO, INVERSE")
-
-        self.panel = ttk.Frame(self, borderwidth=0)
-        self.panel.grid(row=row, column=4, rowspan=2, padx=(10, 10), pady=(10, 10), sticky="ewns")
-
-
 class Preferences(ttk.Labelframe):
     def __init__(self, master):
         super().__init__(master)
@@ -202,12 +170,8 @@ class Preferences(ttk.Labelframe):
                                             text="Ausgabeformat (Wrapper)")
         self.film_wrapper_label.grid(row=0, column=0, padx=(10, 10), pady=(5, 5), sticky="ew")
         self.film_wrapper_values = [
-            "avi",
-            "mkv",
             "mov",
             "mp4",
-            "mv4",
-            "wmf",
         ]
 
         self.film_wrapper = ttk.Combobox(self.panel,
@@ -216,24 +180,9 @@ class Preferences(ttk.Labelframe):
                                          state="readonly")
 
         self.film_wrapper.grid(row=0, column=1, padx=(0, 10), pady=(5, 5), sticky="ew")
-        self.film_wrapper.current(2)
+        self.film_wrapper.current(1)
         ToolTip(self.film_wrapper,
                 text="Das Ausgabeformat ist eine Hülle um das interne Format des generierten Films.",
-                bootstyle="INFO, INVERSE")
-        self.film_codec_values = [
-            "avc1", "h263", "h264", "h265", "mjpg", "mpv4", "xvid", "x264"
-        ]
-
-        self.film_codec_label = ttk.Label(self.panel, font=beck_view_font, text="Codec")
-        self.film_codec_label.grid(row=0, column=2, padx=(30, 10), pady=(5, 5), sticky="ew")
-        self.film_codec = ttk.Combobox(self.panel,
-                                       font=beck_view_font,
-                                       values=self.film_codec_values,
-                                       state="readonly")
-        self.film_codec.grid(row=0, column=3, padx=(0, 10), pady=(5, 5), sticky="ew")
-        self.film_codec.current(0)
-        ToolTip(self.film_codec,
-                text="Codec legt die interne Kodierung fest. Damit werden Qualität und Größe der Ausgabedatei (Komprimierung) beeinflusst.",
                 bootstyle="INFO, INVERSE")
 
         self.film_resolution_values = [
@@ -257,11 +206,32 @@ class Preferences(ttk.Labelframe):
                 text="Auflösung in horizontaler und vertikaler Richtung. 'automatic' ermittelt die Auflösung selbständig",
                 bootstyle="INFO, INVERSE")
 
+        self.quality_label = ttk.Label(self.panel,
+                                       font=beck_view_font,
+                                       text="Qualität des Films")
+        self.quality_label.grid(row=0, column=2, padx=(10, 10), pady=(5, 5), sticky="ew")
+        self.quality_values = [
+            "preview",
+            "good",
+            "better",
+            "best"
+        ]
+        self.quality = ttk.Combobox(self.panel,
+                                    font=beck_view_font,
+                                    values=self.quality_values,
+                                    state="readonly")
+
+        self.quality.grid(row=0, column=3, padx=(0, 10), pady=(5, 5), sticky="ew")
+        self.quality.current(3)
+        ToolTip(self.quality,
+                text="Das Qualität des generierten Films.",
+                bootstyle="INFO, INVERSE")
+
         self.fps_label = ttk.Label(self.panel, font=beck_view_font,
                                    text="FPS")
-        self.fps_label.grid(row=1, column=2, padx=(30, 0), pady=(5, 5), sticky="ew")
+        self.fps_label.grid(row=1, column=2, padx=(10, 0), pady=(5, 5), sticky="ew")
         self.fps = ttk.Spinbox(self.panel, font=beck_view_font, from_=18, to=30, state="readonly")
-        self.fps.grid(row=1, column=3, padx=(0, 10), pady=(10, 10), sticky="ew")
+        self.fps.grid(row=1, column=3, padx=(00, 10), pady=(10, 10), sticky="ew")
         self.fps.set(24)
         ToolTip(self.fps,
                 text="Bilder pro Sekunde (FPS).\nWertebereich 18 bis 30.",
@@ -276,14 +246,13 @@ class Preferences(ttk.Labelframe):
             "vivid",
             "neutral"
         ]
-
         self.film_tonemap_label = ttk.Label(self.panel, font=beck_view_font, text="Tone-Mapping")
-        self.film_tonemap_label.grid(row=0, column=4, padx=(30, 10), pady=(5, 5), sticky="ew")
+        self.film_tonemap_label.grid(row=3, column=0, padx=(10, 10), pady=(10, 10), sticky="ew")
         self.film_tonemap = ttk.Combobox(self.panel,
                                          font=beck_view_font,
                                          values=self.film_tonemap_values,
                                          state="readonly")
-        self.film_tonemap.grid(row=0, column=5, padx=(0, 10), pady=(5, 5), sticky="ew")
+        self.film_tonemap.grid(row=3, column=1, padx=(0, 10), pady=(10, 10), sticky="ew")
         self.film_tonemap.current(0)
         ToolTip(self.film_tonemap,
                 text="Mit Tone Mapping oder Dynamikkompression wird die Kompression des Dynamikumfangs von Hochkontrastbildern (HDI) bezeichnet, also von digitalen Bildern mit hohem Helligkeitsumfang. Beim Tone Mapping wird der Kontrastumfang eines Hochkontrastbildes verringert, um es auf herkömmlichen Ausgabegeräten darstellen zu können.",
@@ -365,11 +334,8 @@ class GroupLayout(ttk.Frame):
         self.output_directory.grid_columnconfigure(2, weight=0)
         self.output_directory.grid(row=2, column=0, columnspan=3, padx=(10, 10), pady=(5, 5), sticky=EW)
 
-        self.technical_attributes = TechnicalAttributes(self.panel)
-        self.technical_attributes.grid(row=3, column=0, columnspan=3, padx=(10, 10), pady=(5, 5), sticky=EW)
-
         self.subprocess_output = SubprocessOutput(self)
-        self.subprocess_output.grid(row=4, column=0, columnspan=3, rowspan=1, padx=(10, 10), pady=(0, 5), sticky=NSEW)
+        self.subprocess_output.grid(row=4, column=0, columnspan=3, rowspan=1, padx=(10, 10), pady=(5, 5), sticky=NSEW)
 
         self.start_button = ttk.Button(self,
                                        text="Beck-View-Movie starten",
@@ -414,27 +380,20 @@ class GroupLayout(ttk.Frame):
                                             'assemble-film.cmd' if self.windows else 'beck-view-movie')
 
             self.fps = self.preferences.fps.get()
-            self.date = f"{datetime.now():%Y_%m_%d}"
-            self.filename = f"{self.output_directory.filename.get()}_{self.fps}fps_{self.date}"
 
             film_resolution = self.preferences.film_resolution.get()
             if film_resolution != "automatic":
                 film_resolution = film_resolution.get().replace(' ', '')
 
-            self.threads = self.technical_attributes.threads.get()
-            self.batch = self.technical_attributes.batch.get()
-
             command = [
                 str(filepath),
                 f"--input-path={self.input_directory.input_directory_path.get()}",
                 f"--output-path={self.output_directory.output_directory_path.get()}",
-                f"--name={self.filename}",
+                f"--name={self.output_directory.filename.get()}",
                 f"--output-format={self.preferences.film_wrapper.get()}",
-                f"--codec={self.preferences.film_codec.get()}",
+                f"--quality={self.preferences.quality.get()}",
                 f"--width-height={film_resolution}",
-                f"--frames-per-second={self.fps}",
-                f"--number-of-workers={self.threads}",
-                f"--batch-size={self.batch}"
+                f"--frames-per-second={self.fps}"
             ]
             if self.preferences.flip_vertical.get():
                 command.append("--flip-vertical")
@@ -522,8 +481,8 @@ class Application(ttk.Window):
 
         self.windows = platform.system() == "Windows"
 
-        self.minsize(width=1700, height=840)
-        self.geometry("1700x840")
+        self.minsize(width=1400, height=840)
+        self.geometry("1400x840")
         self.title("Beck View Movie GUI")
         self.option_add("*tearOff", False)
 

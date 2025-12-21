@@ -25,10 +25,9 @@ consistent look and feel on Windows, macOS, and Linux.
   * Input image directory
   * Output movie directory and base name
   * Frame rate (FPS)
-  * Resolution
+  * Resolution and scaling
   * Container format, and compression settings
   * Vertical and horizontal mirroring of digitised images
-´
 * Automatic construction of a valid `beck-view-movie` command line
 * Launches `beck-view-movie` as a **subprocess**
 * Displays **real‑time stdout / stderr output** in the GUI
@@ -47,14 +46,14 @@ consistent look and feel on Windows, macOS, and Linux.
 
 ## 📦 Installation
 
-Installation is performed via the provided platform‑specific installer scripts.
+Installation is performed via the provided platform-specific installer scripts.
 
 The scripts will:
 
 * create a local Python virtual environment
 * install all required Python dependencies
-* build the application using **Cython**
-* generate a standalone executable using **PyInstaller**
+* build the GUI using **Cython**
+* create a platform-specific executable using **PyInstaller**
 
 ### 🔹 Linux / macOS
 
@@ -153,6 +152,37 @@ Contributions are welcome.
 
 This project is licensed under the **MIT License**.
 See the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🧯 Troubleshooting
+
+**The executable does not start**
+
+* Ensure the installation script completed without errors
+* Verify that Python 3.12+ is available on your system
+* On Linux/macOS, check executable permissions:
+
+  ```bash
+  chmod +x beck-view-movie-gui
+  ```
+
+**`beck-view-movie` cannot be found or fails to run**
+
+* Make sure `beck-view-movie` is built and accessible
+* Verify that the executable or script is available in the expected location
+* Try running `beck-view-movie` manually from a terminal to confirm it works
+
+**GUI starts but no output is shown**
+
+* Check that the selected input directory contains valid image files
+* Verify write permissions for the selected output directory
+
+If problems persist, please open a GitHub issue and include:
+
+* your operating system
+* Python version
+* console output from the installer script
 
 ---
 

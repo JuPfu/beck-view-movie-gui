@@ -1,149 +1,161 @@
 # Beck View Movie GUI
 
-The Beck-View-Movie-gui App supplies a user-friendly interface to configure the various settings for the Beck-View-Movie Application, such as output directory of the generated movie, the (base-)name of the generated movie, the movie's resolution, codec, format, frames per second, and other technical attributes. It is built using ttkbootstrap for a modern and consistent look and feel across different operating systems.
+**Beck View Movie GUI** is a cross‑platform graphical frontend for the
+[`beck-view-movie`](https://github.com/JuPfu/beck-view-movie) command‑line application.
+
+It provides a user‑friendly way to configure all movie‑generation parameters and
+executes `beck-view-movie` as an external process while displaying its live output
+inside the GUI.
+
+The application is written in Python and uses **ttkbootstrap** to provide a modern,
+consistent look and feel on Windows, macOS, and Linux.
 
 ![Beck View Movie GUI](./assets/img/beck-view-movie-gui.png)
-beck-view-movie-gui showing log-information after it successfully has finished assembling 3600 digitised images into a movie.
+
+*beck-view-movie-gui after successfully assembling 3600 digitised images into a movie.*
 
 ---
 
 ## 🚀 Features
 
-* **Graphical User Interface** for the [`beck-view-movie`](https://github.com/JuPfu/beck-view-movie) command-line tool.
-* Provides **GUI widgets** for all available command-line options of `beck-view-movie`.
-* Allows users to:
+* Graphical user interface for the `beck-view-movie` CLI tool
+* GUI controls for **all relevant command‑line options**
+* Configuration of:
 
-  * Select **input image folders**.
-  * Set **output video file path**.
-  * Configure video parameters such as:
-    * **Vertical or horizontal mirroring** of digitised images
-    * **Frame rate**
-    * **Resolution scaling**
-    * **Codec options**
-    * **Compression settings**
-  * Configure performance options such as:
-    * Number of **parallel Threads** to run
-    * **Batch-size of Image frames** passed to each thread
-* Assembles the selected values into a valid **command-line call**.
-* On clicking **“Beck-View-Movie starten”**, the GUI launches `beck-view-movie` as a **subprocess** with all arguments passed correctly.
-* Displays the **real-time console output** of the process in the GUI for user feedback.
-* Provides a **Stop button** to terminate the running subprocess if needed.
+  * Input image directory
+  * Output movie directory and base name
+  * Frame rate (FPS)
+  * Resolution
+  * Container format, and compression settings
+  * Vertical and horizontal mirroring of digitised images
+´
+* Automatic construction of a valid `beck-view-movie` command line
+* Launches `beck-view-movie` as a **subprocess**
+* Displays **real‑time stdout / stderr output** in the GUI
+* **Stop button** to terminate the running process cleanly
 
 ---
 
 ## 🧰 Requirements
 
-- Python **3.12+**
-- Dependencies listed in `requirements.txt` (GUI framework, subprocess handling, etc.)
-- [**beck-view-movie**](https://github.com/JuPfu/beck-view-movie) is built
+* Python **3.12 or newer**
+* A working build of
+  [`beck-view-movie`](https://github.com/JuPfu/beck-view-movie)
+* All Python dependencies are installed automatically by the installer scripts
 
 ---
 
 ## 📦 Installation
 
+Installation is performed via the provided platform‑specific installer scripts.
+
+The scripts will:
+
+* create a local Python virtual environment
+* install all required Python dependencies
+* build the application using **Cython**
+* generate a standalone executable using **PyInstaller**
+
+### 🔹 Linux / macOS
+
 ```bash
 git clone https://github.com/JuPfu/beck-view-movie-gui.git
 cd beck-view-movie-gui
-python -m venv venv
-source venv/bin/activate    # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-````
+./install.sh
+```
+
+If required, make the script executable first:
+
+```bash
+chmod +x install.sh
+```
+
+---
+
+### 🔹 Windows
+
+```bat
+git clone https://github.com/JuPfu/beck-view-movie-gui.git
+cd beck-view-movie-gui
+install.bat
+```
+
 ---
 
 ## ▶️ Usage
 
-1. Run the GUI:
+After installation, the application can be run either via the generated
+executable or directly via Python.
 
-   ```bash
-   python beck_view_movie_gui.py
-   ```
+### Run the executable
 
-2. Generate the video:
-
-   * Click **"Beck-View-Movie starten"**. Log output appears in the GUI.
-   * To stop prematurely, click **"Beck-View-Movie stoppen"** (subprocess is terminated cleanly).
-
----
-
-## 📦 Building a Standalone Executable with Nuitka
-
-If you want a portable, standalone executable, use Nuitka to compile the GUI:
-
-### 🔧 Install Nuitka
+#### Linux / macOS
 
 ```bash
-pip install nuitka
-# Ensure you have the required C/C++ compilers installed on your system
+./beck-view-movie-gui
 ```
-
-### 🛠 Build
 
 #### Windows
 
-```batch
-python -m nuitka  --standalone --onefile --enable-plugin=tk-inter --windows-console-mode=disable --windows-icon-from-ico=beck-view-digitize.png -o "beck-view-movie-gui" beck-view-movie-gui.py
+```bat
+beck-view-movie-gui.exe
 ```
 
-#### macOS / Linux
+---
 
-Adapt the paths for **--tcl-library-dir** and **--tk-library-dir** to your environment.
+### Run via Python (development mode)
 
 ```bash
-python3 -m nuitka  --product-name="beck-view-movie.gui" --standalone --macos-app-icon=beck-view-digitize.png --macos-app-mode=gui --onefile --enable-plugin=tk-inter --tcl-library-dir=/opt/homebrew/Cellar/tcl-tk/9.0.1/lib --tk-library-dir=/opt/homebrew/Cellar/tcl-tk/9.0.1/lib --static-libpython=no -o "beck-view-movie-gui" beck-view-movie-gui.py
-chmod +x beck-view-movie-gui
+python beck-view-movie-gui.py
 ```
 
-### ✅ Run It
+---
 
-* **Windows**:
-  `beck-view-movie-gui.exe`
+## 🖥️ How It Works
 
-* **macOS/Linux**:
-  `./beck-view-movie-gui`
+1. The GUI collects all selected parameters from the user interface.
+2. These parameters are translated into a valid `beck-view-movie` command line.
+3. The command is executed as a subprocess.
+4. Console output is streamed live into the GUI log window.
+5. The running process can be terminated at any time using the **Stop** button.
 
-Or simply run the script for development:
-
-```bash
-python beck_view_movie_gui.py
-```
+The GUI itself does **not** perform video processing; all heavy lifting is done
+by `beck-view-movie`.
 
 ---
 
 ## 👥 Contributing
 
-Contributions are warmly welcome! To help out:
+Contributions are welcome.
 
-1. **Fork** the repo
-2. Create a feature branch:
+1. Fork the repository
+2. Create a feature branch
 
    ```bash
    git checkout -b my-feature
    ```
-3. **Make your changes**
-4. **Commit** with clear message:
+3. Implement your changes
+4. Commit with a clear message
 
    ```bash
    git commit -am "Add feature X"
    ```
-5. **Push** your branch:
+5. Push the branch
 
    ```bash
    git push origin my-feature
    ```
-6. **Open a Pull Request** for review.
+6. Open a Pull Request
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for full details.
+This project is licensed under the **MIT License**.
+See the [LICENSE](LICENSE) file for details.
 
 ---
 
 ## 📬 Contact
 
-Questions or suggestions? Please open an issue on GitHub or contact the maintainer directly.
-
----
-
-
+For bug reports, feature requests, or questions, please open an issue on GitHub.

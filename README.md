@@ -3,7 +3,7 @@
 The Beck-View-Movie-gui App supplies a user-friendly interface to configure the various settings for the Beck-View-Movie Application, such as output directory of the generated movie, the (base-)name of the generated movie, the movie's resolution, codec, format, frames per second, and other technical attributes. It is built using ttkbootstrap for a modern and consistent look and feel across different operating systems.
 
 ![Beck View Movie GUI](./assets/img/beck-view-movie-gui.png)
-beck-view-movie-gui showing log-information after it successfully has finished assembling 2163 digitised images into a movie.
+beck-view-movie-gui showing log-information after it successfully has finished assembling 3600 digitised images into a movie.
 
 ---
 

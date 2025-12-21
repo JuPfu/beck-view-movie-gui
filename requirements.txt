@@ -1,6 +1,6 @@
 ttkbootstrap>=1.19.2
 tk>=0.1.0
 setuptools>=80.9.0
-cython>=3.2.2
+cython>=3.2.3
 pyinstaller>=6.17.0
 imageio>=2.37.2

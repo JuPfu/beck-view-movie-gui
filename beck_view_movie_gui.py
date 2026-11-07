@@ -1,5 +1,6 @@
 import asyncio
 import os
+import sys
 import platform
 import signal
 import subprocess
@@ -490,7 +491,11 @@ class Application(ttk.Window):
         self.title("Beck View Movie GUI")
         self.option_add("*tearOff", False)
 
-        self.iconbitmap("beck-view-movie-gui.ico")
+        if sys.platform.startswith("win"):
+            self.iconbitmap("beck-view-movie-gui.ico")
+        else:
+            logo = tkinter.PhotoImage(file="beck-view-movie-logo.png")
+            self.iconphoto(True, logo)
 
         self.menu = MainMenu(self)
         self.config(menu=self.menu)

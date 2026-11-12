@@ -1,525 +1,600 @@
-import asyncio
-import os
-import sys
+"""Beck-View-Movie GUI - Oberfläche zum Starten und Stoppen von Beck-View-Movie.
+
+tkinter/ttk mit optionalem Theme aus dem Paket ttkthemes (pip install ttkthemes).
+Der Subprozess wird in einem Hintergrund-Thread gelesen, die Ausgabe gelangt
+über eine Queue in die GUI.
+"""
+
 import platform
+import queue
 import signal
 import subprocess
-import time
-import tkinter
-from asyncio import Task
+import sys
+import threading
+import tkinter as tk
 from datetime import datetime
 from pathlib import Path
+from tkinter import filedialog, messagebox, ttk
+from tkinter.scrolledtext import ScrolledText
 
-import ttkbootstrap as ttk
-from ttkbootstrap.constants import *
-from ttkbootstrap.widgets.scrolled import ScrolledText
-from ttkbootstrap.widgets.tooltip import ToolTip
+try:
+    from ttkthemes import ThemedTk  # pip install ttkthemes
+except ImportError:  # GUI läuft auch ohne das Paket (dann mit Standard-Theme)
+    ThemedTk = None
 
-beck_view_font = ("Helvetica", 14)
+# Theme aus ttkthemes, z. B. "equilux" (dunkel), "black" (dunkel), "arc", "breeze",
+# "adapta", "yaru", "plastik", "radiance", "clearlooks"
+THEME_NAME = "blue"
+
+APP_DIR = Path(__file__).resolve().parent
+BECK_VIEW_FONT = ("Helvetica", 14)
+IS_WINDOWS = platform.system() == "Windows"
+
+BECK_VIEW_MOVIE_PATH = Path.home().joinpath(
+    "PycharmProjects",
+    "beck-view-movie",
+    "assemble-film.cmd" if IS_WINDOWS else "beck-view-movie",
+)
+DEFAULT_DIR = Path("~", "Filme").expanduser()
+
+BaseWindow = ThemedTk if ThemedTk is not None else tk.Tk
+
+
+def find_asset(name: str) -> Path | None:
+    """Sucht eine Ressource (Logo, Icon) neben dem Skript und im aktuellen Arbeitsverzeichnis."""
+    for folder in (APP_DIR, Path.cwd()):
+        candidate = folder / name
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def themed_text_colors() -> dict:
+    """Farben für klassische tk-Widgets (Text), damit sie zum aktiven ttk-Theme passen."""
+    style = ttk.Style()
+    background = style.lookup("TEntry", "fieldbackground") or style.lookup("TFrame", "background") or "white"
+    foreground = style.lookup("TEntry", "foreground") or style.lookup("TLabel", "foreground") or "black"
+    return {"background": background, "foreground": foreground, "insertbackground": foreground}
+
+
+class ToolTip:
+    """Einfacher Tooltip für beliebige Widgets."""
+
+    def __init__(self, widget: tk.Widget, text: str):
+        self.widget = widget
+        self.text = text
+        self.tip: tk.Toplevel | None = None
+        widget.bind("<Enter>", self.show, add="+")
+        widget.bind("<Leave>", self.hide, add="+")
+        widget.bind("<ButtonPress>", self.hide, add="+")
+
+    def show(self, _event=None):
+        if self.tip:
+            return
+        x = self.widget.winfo_rootx() + 20
+        y = self.widget.winfo_rooty() + self.widget.winfo_height() + 5
+        self.tip = tk.Toplevel(self.widget)
+        self.tip.wm_overrideredirect(True)
+        self.tip.wm_geometry(f"+{x}+{y}")
+        # Außen ein Rahmen (1 px Rand), innen ein Label mit Abstand zum Rand.
+        # Der Abstand wird in Millimetern angegeben und so von Tk passend zur
+        # Bildschirmauflösung umgerechnet.
+        pad_x = round(self.widget.winfo_fpixels("4m"))
+        pad_y = round(self.widget.winfo_fpixels("2.5m"))
+        border = tk.Frame(self.tip, background="black", padx=1, pady=1)
+        border.pack()
+        tk.Label(border, text=self.text, justify="left", background="#ffffe0",
+                 foreground="black", font=("Helvetica", 12), wraplength=420,
+                 borderwidth=0).pack(padx=0, pady=0, ipadx=pad_x, ipady=pad_y)
+
+    def hide(self, _event=None):
+        if self.tip:
+            self.tip.destroy()
+            self.tip = None
 
 
 class FrameInputDirectory(ttk.Labelframe):
-    from tkinter.filedialog import askdirectory
-
-    @staticmethod
-    def show_directory_dialog(must_exist) -> str:
-        p = str(Path('~', 'Filme').expanduser())
-        path = FrameInputDirectory.askdirectory(title="Verzeichnis mit digitalisierten Bildern",
-                                                initialdir=p,
-                                                mustexist=must_exist)
-        return r'{}'.format(path) if path else r'{}'.format(p)
-
     def __init__(self, master):
-        super().__init__(master)
+        super().__init__(master, text="Ordner mit digitalisierten Bildern auswählen",
+                         borderwidth=3, relief=tk.SOLID)
 
-        self.configure(borderwidth=3, text="Ordner mit digitalisierten Bildern auswählen", relief=SOLID)
-        self.input_directory_label = ttk.Label(self, text="Verzeichnis", font=beck_view_font)
-        self.input_directory_label.grid(row=0, column=0, padx=(10, 10), pady=(10, 10), sticky="ew")
-        self.input_directory_path = ttk.Entry(self, font=beck_view_font, takefocus=0)
-        self.input_directory_path.insert(0, str(Path('~', 'Filme').expanduser()))
-        self.input_directory_path.configure(state="readonly")
-        self.input_directory_path.grid(row=0, column=1, pady=(10, 10), sticky="ew")
+        self.path_var = tk.StringVar(value=str(DEFAULT_DIR))
 
-        s = ttk.Style()
-        s.configure('Beck-View_Movie-GUI.TButton', font=beck_view_font)
-        self.input_directory_button = ttk.Button(self,
-                                                 text="Auswählen",
-                                                 style="Beck-View_Movie-GUI.TButton",
-                                                 command=self.input_directory_button_callback)
-        self.input_directory_button.grid(row=0, column=2, padx=(10, 10))
-        ToolTip(self.input_directory_button,
-                text="Öffnet den Dialog zur Auswahl des Ordners in dem sich digitalisierte Bilder befinden.",
-                bootstyle="INFO, INVERSE")
+        self.directory_label = ttk.Label(self, text="Verzeichnis", font=BECK_VIEW_FONT)
+        self.directory_label.grid(row=0, column=0, padx=10, pady=10, sticky=tk.EW)
 
-    def input_directory_button_callback(self):
-        path = FrameInputDirectory.show_directory_dialog(True)
-        self.input_directory_path.configure(state="normal")
-        text = self.input_directory_path.get()
-        if len(path) > 0:
-            self.input_directory_path.delete(0, len(text))
-            self.input_directory_path.insert(index=0, string=path)
-        self.input_directory_path.configure(state="readonly")
+        self.directory_path = ttk.Entry(self, font=BECK_VIEW_FONT, takefocus=False,
+                                        textvariable=self.path_var, state="readonly")
+        self.directory_path.grid(row=0, column=1, pady=10, sticky=tk.EW)
+
+        self.directory_button = ttk.Button(self, text="Auswählen",
+                                           style="beck-view-movie-gui.TButton",
+                                           command=self.directory_button_callback)
+        self.directory_button.grid(row=0, column=2, padx=10)
+        ToolTip(self.directory_button,
+                "Öffnet den Dialog zur Auswahl des Ordners, in dem sich digitalisierte Bilder befinden.")
+
+        self.grid_columnconfigure(0, weight=0)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure(2, weight=0)
+
+    def directory_button_callback(self):
+        initial = self.path_var.get()
+        if not Path(initial).is_dir():
+            initial = str(DEFAULT_DIR if DEFAULT_DIR.is_dir() else Path.home())
+        path = filedialog.askdirectory(title="Verzeichnis mit digitalisierten Bildern",
+                                       initialdir=initial, mustexist=True)
+        if path:  # Abbruch des Dialogs lässt den bisherigen Wert unverändert
+            self.path_var.set(str(Path(path)))
+
+    def get(self) -> str:
+        return self.path_var.get()
 
 
 class FrameOutputDirectory(ttk.Labelframe):
-    from tkinter.filedialog import askdirectory
-
-    @staticmethod
-    def show_directory_dialog(must_exist) -> str:
-        path = FrameOutputDirectory.askdirectory(title="Ausgabeverzeichnis für den generierten Film festlegen",
-                                                 initialdir=str(Path('~', 'Filme').expanduser()),
-                                                 mustexist=must_exist)
-        return r'{}'.format(path)
+    DEFAULT_FILENAME = "beck-view-movie"
 
     def __init__(self, master):
-        super().__init__(master)
+        super().__init__(master, text="Name und Ausgabeverzeichnis für den generierten Film festlegen",
+                         borderwidth=3, relief=tk.SOLID)
 
-        self.configure(borderwidth=3, text="Name und Ausgabeverzeichnis für den generierten Film festlegen",
-                       relief=SOLID)
+        self.filename_var = tk.StringVar(value=self.DEFAULT_FILENAME)
+        self.path_var = tk.StringVar(value=str(DEFAULT_DIR))
 
-        self.filename_label = ttk.Label(self, text="Dateiname", font=beck_view_font)
-        self.filename_label.grid(row=0, column=0, padx=(10, 10), pady=(10, 10), sticky="ew")
+        self.filename_label = ttk.Label(self, text="Dateiname", font=BECK_VIEW_FONT)
+        self.filename_label.grid(row=0, column=0, padx=10, pady=10, sticky=tk.EW)
+        self.filename_entry = ttk.Entry(self, textvariable=self.filename_var, font=BECK_VIEW_FONT)
+        self.filename_entry.grid(row=0, column=1, pady=10, sticky=tk.EW)
 
-        self.filename = tkinter.StringVar()
-        self.entry = ttk.Entry(self, textvariable=self.filename, font=beck_view_font)
+        self.directory_label = ttk.Label(self, text="Verzeichnis", font=BECK_VIEW_FONT)
+        self.directory_label.grid(row=1, column=0, padx=10, pady=10, sticky=tk.EW)
+        self.directory_path = ttk.Entry(self, font=BECK_VIEW_FONT, takefocus=False,
+                                        textvariable=self.path_var, state="readonly")
+        self.directory_path.grid(row=1, column=1, pady=10, sticky=tk.EW)
 
-        self.filename.set("beck-view-movie")
-        self.entry.grid(row=0, column=1, padx=(0, 0), pady=(10, 10), sticky="ew")
+        self.directory_button = ttk.Button(self, text="Auswählen",
+                                           style="beck-view-movie-gui.TButton",
+                                           command=self.directory_button_callback)
+        self.directory_button.grid(row=1, column=2, padx=10)
+        ToolTip(self.directory_button,
+                "Öffnet den Dialog zur Auswahl des Ordners, in dem der generierte Film abgelegt wird.")
 
-        self.output_directory_label = ttk.Label(self, text="Verzeichnis", font=beck_view_font)
-        self.output_directory_label.grid(row=1, column=0, padx=(10, 10), pady=(10, 10), sticky="ew")
-        self.output_directory_path = ttk.Entry(self, font=beck_view_font, takefocus=0)
-        self.output_directory_path.insert(0, str(Path('~', 'Filme').expanduser()))
-        self.output_directory_path.configure(state="readonly")
-        self.output_directory_path.grid(row=1, column=1, pady=(10, 10), sticky="ew")
-
-        s = ttk.Style()
-        s.configure('Beck-View_Movie-GUI.TButton', font=beck_view_font)
-        self.output_directory_button = ttk.Button(self,
-                                                  text="Auswählen",
-                                                  style="Beck-View_Movie-GUI.TButton",
-                                                  command=self.directory_button_callback)
-        self.output_directory_button.grid(row=1, column=2, padx=(10, 10))
-        ToolTip(self.output_directory_button,
-                text="Öffnet den Dialog zur Auswahl des Ordners in dem sich digitalisierte Bilder befinden.",
-                bootstyle="INFO, INVERSE")
+        self.grid_columnconfigure(0, weight=0)
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure(2, weight=0)
 
     def directory_button_callback(self):
-        path = FrameOutputDirectory.show_directory_dialog(False)
-        self.output_directory_path.configure(state="normal")
-        text = self.output_directory_path.get()
-        if len(path) > 0:
-            self.output_directory_path.delete(0, len(text))
-            self.output_directory_path.insert(index=0, string=path)
-        self.output_directory_path.configure(state="readonly")
+        initial = self.path_var.get()
+        if not Path(initial).is_dir():
+            initial = str(DEFAULT_DIR if DEFAULT_DIR.is_dir() else Path.home())
+        path = filedialog.askdirectory(title="Ausgabeverzeichnis für den generierten Film festlegen",
+                                       initialdir=initial, mustexist=False)
+        if path:
+            self.path_var.set(str(Path(path)))
+
+    def get_filename(self) -> str:
+        return self.filename_var.get().strip() or self.DEFAULT_FILENAME
+
+    def get_path(self) -> str:
+        return self.path_var.get()
 
 
 class Preferences(ttk.Labelframe):
+    FILM_WRAPPERS = ["mov", "mp4"]
+    FILM_RESOLUTIONS = [
+        "automatic",
+        "1600 x 1200",
+        "1920 x 1080",
+        "2048 x 1536",
+        "2592 x 1944",
+        "3840 x 2160",
+    ]
+    QUALITIES = ["preview", "good", "better", "best"]
+    TONEMAP_NONE = "kein Tone-Mapping"
+    TONEMAP_PRESETS = [TONEMAP_NONE, "cinematic", "natural", "highlight", "soft", "vivid", "neutral"]
+
     def __init__(self, master):
-        super().__init__(master)
+        super().__init__(master, text="Einstellungen", borderwidth=3, relief=tk.SOLID)
 
-        # increase font size for Listbox of Combobox
-        self.master.option_add("*TCombobox*Listbox*Font", beck_view_font)
+        # Logo oben links (fehlt die Datei, läuft die GUI trotzdem)
+        self.logo = None
+        logo_file = find_asset("beck-view-movie-logo.png")
+        if logo_file:
+            self.logo = tk.PhotoImage(file=str(logo_file))  # Referenz halten, sonst wird das Bild gelöscht
+            self.logo_label = ttk.Label(self, image=self.logo)
+            self.logo_label.grid(row=0, column=0, rowspan=3, padx=10, pady=0, sticky=tk.EW)
+        else:
+            print("Logo 'beck-view-movie-logo.png' nicht gefunden "
+                  f"(gesucht in {APP_DIR} und {Path.cwd()})", file=sys.stderr)
 
-        # increase font size for TCheckbutton
-        s = ttk.Style()
-        s.configure('Beck-View-Movie-GUI.TCheckbutton', font=beck_view_font)
-        s.map('Beck-View-Movie-GUI.TCheckbutton',
-              # font=[('focus', ('Helvetica', 14, 'italic'))],
-              background=[('focus', 'burlywood')],
-              )
-
-        self.configure(borderwidth=3, text="Einstellungen", relief=SOLID)
-
-        self.logo = ttk.PhotoImage(file="beck-view-movie-logo.png")
-        self.logo_label = ttk.Label(self, image=self.logo)
-        self.logo_label.grid(row=0, column=0, rowspan=3, padx=(10, 10), pady=(0, 0), sticky="ew")
-
-        self.flip_vertical = tkinter.BooleanVar()
-        self.flip_vertical.set(True)
-
-        self.flip_vertical_checkbutton = ttk.Checkbutton(self, text="An vertikaler Achse spiegeln",
-                                                         onvalue=True, offvalue=False,
-                                                         variable=self.flip_vertical,
-                                                         padding="5  10",
-                                                         style='Beck-View-Movie-GUI.TCheckbutton'
-                                                         )
-        self.flip_vertical_checkbutton.grid(row=0, column=1, padx=(5, 0), pady=(5, 5), sticky="w")
+        # Spiegeln
+        self.flip_vertical = tk.BooleanVar(value=True)
+        self.flip_vertical_checkbutton = ttk.Checkbutton(
+            self, text="An vertikaler Achse spiegeln",
+            onvalue=True, offvalue=False, variable=self.flip_vertical,
+            padding="5 10", style="beck-view-movie-gui.TCheckbutton")
+        self.flip_vertical_checkbutton.grid(row=0, column=1, padx=(5, 0), pady=5, sticky=tk.W)
         ToolTip(self.flip_vertical_checkbutton,
-                text="Alle Bilder des Films an der vertikalen Bildachse spiegeln.",
-                bootstyle="INFO, INVERSE")
+                "Alle Bilder des Films an der vertikalen Bildachse spiegeln.")
 
-        self.flip_horizontal = tkinter.BooleanVar()
-        self.flip_horizontal.set(False)
-
-        self.flip_horizontal_checkbutton = ttk.Checkbutton(self, text="An horizontaler Achse spiegeln",
-                                                           onvalue=True, offvalue=False,
-                                                           variable=self.flip_horizontal,
-                                                           padding="5  10",
-                                                           style='Beck-View-Movie-GUI.TCheckbutton'
-                                                           )
-        self.flip_horizontal_checkbutton.grid(row=0, column=2, padx=(15, 0), pady=(5, 5), sticky="w")
+        self.flip_horizontal = tk.BooleanVar(value=False)
+        self.flip_horizontal_checkbutton = ttk.Checkbutton(
+            self, text="An horizontaler Achse spiegeln",
+            onvalue=True, offvalue=False, variable=self.flip_horizontal,
+            padding="5 10", style="beck-view-movie-gui.TCheckbutton")
+        self.flip_horizontal_checkbutton.grid(row=0, column=2, padx=(15, 0), pady=5, sticky=tk.W)
         ToolTip(self.flip_horizontal_checkbutton,
-                text="Alle Bilder des Films an der horizontalen Bildachse spiegeln.",
-                bootstyle="INFO, INVERSE")
+                "Alle Bilder des Films an der horizontalen Bildachse spiegeln.")
 
+        # Panel mit Auswahlfeldern
         self.panel = ttk.Frame(self, borderwidth=0)
-        self.panel.grid(row=1, column=1, rowspan=2, columnspan=4, padx=(0, 0), pady=(0, 0), sticky="ewns")
+        self.panel.grid(row=1, column=1, rowspan=2, columnspan=4, sticky=tk.NSEW)
 
-        self.film_wrapper_label = ttk.Label(self.panel,
-                                            font=beck_view_font,
-                                            text="Ausgabeformat (Wrapper)")
-        self.film_wrapper_label.grid(row=0, column=0, padx=(10, 10), pady=(5, 5), sticky="ew")
-        self.film_wrapper_values = [
-            "mov",
-            "mp4",
-        ]
-
-        self.film_wrapper = ttk.Combobox(self.panel,
-                                         font=beck_view_font,
-                                         values=self.film_wrapper_values,
-                                         state="readonly")
-
-        self.film_wrapper.grid(row=0, column=1, padx=(0, 10), pady=(5, 5), sticky="ew")
+        # Ausgabeformat
+        ttk.Label(self.panel, font=BECK_VIEW_FONT, text="Ausgabeformat (Wrapper)").grid(
+            row=0, column=0, padx=10, pady=5, sticky=tk.EW)
+        self.film_wrapper = ttk.Combobox(self.panel, font=BECK_VIEW_FONT,
+                                         values=self.FILM_WRAPPERS, state="readonly")
+        self.film_wrapper.grid(row=0, column=1, padx=(0, 10), pady=5, sticky=tk.EW)
         self.film_wrapper.current(1)
         ToolTip(self.film_wrapper,
-                text="Das Ausgabeformat ist eine Hülle um das interne Format des generierten Films.",
-                bootstyle="INFO, INVERSE")
+                "Das Ausgabeformat ist eine Hülle um das interne Format des generierten Films.")
 
-        self.film_resolution_values = [
-            "automatic",
-            "1600 x 1200",
-            "1920 x 1080",
-            "2048 x 1536",
-            "2592 x 1944",
-            "3840 x 2160",
-        ]
-
-        self.film_resolution_label = ttk.Label(self.panel, font=beck_view_font, text="Auflösung")
-        self.film_resolution_label.grid(row=1, column=0, padx=(10, 10), pady=(5, 5), sticky="ew")
-        self.film_resolution = ttk.Combobox(self.panel,
-                                            font=beck_view_font,
-                                            values=self.film_resolution_values,
-                                            state="readonly")
-        self.film_resolution.grid(row=1, column=1, padx=(0, 10), pady=(5, 5), sticky="ew")
+        # Auflösung
+        ttk.Label(self.panel, font=BECK_VIEW_FONT, text="Auflösung").grid(
+            row=1, column=0, padx=10, pady=5, sticky=tk.EW)
+        self.film_resolution = ttk.Combobox(self.panel, font=BECK_VIEW_FONT,
+                                            values=self.FILM_RESOLUTIONS, state="readonly")
+        self.film_resolution.grid(row=1, column=1, padx=(0, 10), pady=5, sticky=tk.EW)
         self.film_resolution.current(0)
         ToolTip(self.film_resolution,
-                text="Auflösung in horizontaler und vertikaler Richtung. 'automatic' ermittelt die Auflösung selbständig",
-                bootstyle="INFO, INVERSE")
+                "Auflösung in horizontaler und vertikaler Richtung. "
+                "'automatic' ermittelt die Auflösung selbständig.")
 
-        self.quality_label = ttk.Label(self.panel,
-                                       font=beck_view_font,
-                                       text="Qualität des Films")
-        self.quality_label.grid(row=0, column=2, padx=(10, 10), pady=(5, 5), sticky="ew")
-        self.quality_values = [
-            "preview",
-            "good",
-            "better",
-            "best"
-        ]
-        self.quality = ttk.Combobox(self.panel,
-                                    font=beck_view_font,
-                                    values=self.quality_values,
-                                    state="readonly")
-
-        self.quality.grid(row=0, column=3, padx=(0, 10), pady=(5, 5), sticky="ew")
+        # Qualität
+        ttk.Label(self.panel, font=BECK_VIEW_FONT, text="Qualität des Films").grid(
+            row=0, column=2, padx=10, pady=5, sticky=tk.EW)
+        self.quality = ttk.Combobox(self.panel, font=BECK_VIEW_FONT,
+                                    values=self.QUALITIES, state="readonly")
+        self.quality.grid(row=0, column=3, padx=(0, 10), pady=5, sticky=tk.EW)
         self.quality.current(3)
         ToolTip(self.quality,
-                text="Die Qualität des generierten Films. Aufwand der Erstellung wächst bei jeder Stufe von 'Preview' bis 'best'",
-                bootstyle="INFO, INVERSE")
+                "Die Qualität des generierten Films. Der Aufwand der Erstellung wächst "
+                "bei jeder Stufe von 'preview' bis 'best'.")
 
-        self.fps_label = ttk.Label(self.panel, font=beck_view_font,
-                                   text="FPS")
-        self.fps_label.grid(row=1, column=2, padx=(10, 0), pady=(5, 5), sticky="ew")
-        self.fps = ttk.Spinbox(self.panel, font=beck_view_font, from_=18, to=30, state="readonly")
-        self.fps.grid(row=1, column=3, padx=(00, 10), pady=(10, 10), sticky="ew")
-        self.fps.set(24)
-        ToolTip(self.fps,
-                text="Bilder pro Sekunde (FPS).\nWertebereich 18 bis 30.",
-                bootstyle="INFO, INVERSE")
+        # FPS
+        self.fps_var = tk.IntVar(value=24)
+        ttk.Label(self.panel, font=BECK_VIEW_FONT, text="FPS").grid(
+            row=1, column=2, padx=(10, 0), pady=5, sticky=tk.EW)
+        self.fps = ttk.Spinbox(self.panel, font=BECK_VIEW_FONT, from_=18, to=30,
+                               textvariable=self.fps_var, state="readonly")
+        self.fps.grid(row=1, column=3, padx=(0, 10), pady=10, sticky=tk.EW)
+        ToolTip(self.fps, "Bilder pro Sekunde (FPS).\nWertebereich 18 bis 30.")
 
-        self.film_tonemap_values = [
-            "kein Tone-Mapping",
-            "cinematic",
-            "natural",
-            "highlight",
-            "soft",
-            "vivid",
-            "neutral"
-        ]
-        self.film_tonemap_label = ttk.Label(self.panel, font=beck_view_font, text="Tone-Mapping")
-        self.film_tonemap_label.grid(row=3, column=0, padx=(10, 10), pady=(10, 10), sticky="ew")
-        self.film_tonemap = ttk.Combobox(self.panel,
-                                         font=beck_view_font,
-                                         values=self.film_tonemap_values,
-                                         state="readonly")
-        self.film_tonemap.grid(row=3, column=1, padx=(0, 10), pady=(10, 10), sticky="ew")
+        # Tone-Mapping
+        ttk.Label(self.panel, font=BECK_VIEW_FONT, text="Tone-Mapping").grid(
+            row=2, column=0, padx=10, pady=10, sticky=tk.EW)
+        self.film_tonemap = ttk.Combobox(self.panel, font=BECK_VIEW_FONT,
+                                         values=self.TONEMAP_PRESETS, state="readonly")
+        self.film_tonemap.grid(row=2, column=1, padx=(0, 10), pady=10, sticky=tk.EW)
         self.film_tonemap.current(0)
         ToolTip(self.film_tonemap,
-                text="Mit Tone Mapping oder Dynamikkompression wird die Kompression des Dynamikumfangs von Hochkontrastbildern (HDI) bezeichnet, also von digitalen Bildern mit hohem Helligkeitsumfang. Beim Tone Mapping wird der Kontrastumfang eines Hochkontrastbildes verringert, um es auf herkömmlichen Ausgabegeräten darstellen zu können.",
-                bootstyle="INFO, INVERSE")
+                "Mit Tone Mapping oder Dynamikkompression wird die Kompression des Dynamikumfangs "
+                "von Hochkontrastbildern (HDI) bezeichnet, also von digitalen Bildern mit hohem "
+                "Helligkeitsumfang. Beim Tone Mapping wird der Kontrastumfang eines Hochkontrastbildes "
+                "verringert, um es auf herkömmlichen Ausgabegeräten darstellen zu können.")
+
+        for col, weight in enumerate((0, 0, 0, 2)):
+            self.grid_columnconfigure(col, weight=weight)
 
 
 class SubprocessOutput(ttk.Labelframe):
     def __init__(self, master):
-        super().__init__(master)
+        super().__init__(master, text="Ausgabe `Beck-View-Movie`", borderwidth=3, relief=tk.SOLID)
 
-        self.configure(borderwidth=3, text="Ausgabe `Beck-View-Movie`", relief=SOLID)
+        self.text_output = ScrolledText(self, height=10, font=BECK_VIEW_FONT, wrap=tk.WORD,
+                                        takefocus=False, state="disabled",
+                                        **themed_text_colors())
+        self.text_output.grid(row=0, column=0, padx=10, pady=10, sticky=tk.NSEW)
 
-        # Create ScrolledText widget for displaying subprocess output
-        self.text_output = ScrolledText(self, height=10, font=beck_view_font, wrap=WORD, autohide=True, takefocus=FALSE)
-        self.text_output.grid(row=0, column=0, rowspan=10, padx=10, pady=10, sticky=NSEW)
-
-        # Configure grid to make the text_output widget expand
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
+    def append(self, text: str):
+        self.text_output.configure(state="normal")
+        self.text_output.insert(tk.END, text)
+        self.text_output.see(tk.END)
+        self.text_output.configure(state="disabled")
 
-class MainMenu(ttk.Menu):
-    def __init__(self, master):
-        super().__init__(master)
-        self.file_menu = ttk.Menu(self, tearoff=1)
-        self.file_menu.add_command(label="Neues Projekt")
-        self.file_menu.add_command(label="Letzte Projekte")
-        self.file_menu.add_command(label="Projekt schließen")
-        self.file_menu.add_command(label="Alle Projekte schließen")
-        self.file_menu.add_command(label="Projekt umbenennen")
-        self.file_menu.add_separator()
-        self.file_menu.add_command(label="Beenden", command=master.destroy)
-        self.add_cascade(label="Datei", menu=self.file_menu, underline=0)
 
-        self.window_menu = tkinter.Menu(self, tearoff=0)
-        self.window_menu.add_command(label="Normal", command=self.normal)
-        self.window_menu.add_command(label="Vollbild", command=self.maximize)
-        self.window_menu.add_command(label="Minimiert", command=self.minimize)
-        self.add_cascade(label="Fenster", menu=self.window_menu, underline=0)
+class MainMenu(tk.Menu):
+    def __init__(self, app: "Application"):
+        super().__init__(app)
+        self.app = app
+
+        file_menu = tk.Menu(self, tearoff=False)
+        file_menu.add_command(label="Neues Projekt")
+        file_menu.add_command(label="Letzte Projekte")
+        file_menu.add_command(label="Projekt schließen")
+        file_menu.add_command(label="Alle Projekte schließen")
+        file_menu.add_command(label="Projekt umbenennen")
+        file_menu.add_separator()
+        file_menu.add_command(label="Beenden", command=app.on_closing)
+        self.add_cascade(label="Datei", menu=file_menu, underline=0)
+
+        window_menu = tk.Menu(self, tearoff=False)
+        window_menu.add_command(label="Normal", command=self.normal)
+        window_menu.add_command(label="Vollbild", command=self.maximize)
+        window_menu.add_command(label="Minimiert", command=lambda: self.app.iconify())
+        self.add_cascade(label="Fenster", menu=window_menu, underline=0)
 
     def maximize(self):
-        app.state("zoomed")
+        try:
+            self.app.state("zoomed")  # Windows, macOS
+        except tk.TclError:
+            self.app.attributes("-zoomed", True)  # Linux (X11)
 
     def normal(self):
-        app.state("normal")
-
-    def minimize(self):
-        app.state("iconic")
+        try:
+            self.app.state("normal")
+            self.app.attributes("-zoomed", False)
+        except tk.TclError:
+            pass
 
 
 class GroupLayout(ttk.Frame):
-    def __init__(self, master, windows: bool):
+    MAX_LINES_PER_TICK = 200
+
+    def __init__(self, master):
         super().__init__(master)
 
-        self.windows = windows
+        self.preferences = Preferences(self)
+        self.preferences.grid(row=0, column=0, columnspan=2, padx=10, pady=(10, 5), sticky=tk.EW)
 
-        self.panel = ttk.Frame(self, borderwidth=0)
-        self.panel.grid_columnconfigure(0, weight=0)
-        self.panel.grid_columnconfigure(1, weight=1)
-        self.panel.grid(row=0, column=0, rowspan=4, columnspan=6, padx=(0, 0), pady=(0, 0), sticky="ewns")
+        self.input_directory = FrameInputDirectory(self)
+        self.input_directory.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky=tk.EW)
 
-        # Create other GUI elements
-        self.preferences = Preferences(self.panel)
-        self.preferences.grid_columnconfigure(0, weight=0)
-        self.preferences.grid_columnconfigure(1, weight=0)
-        self.preferences.grid_columnconfigure(2, weight=0)
-        self.preferences.grid_columnconfigure(3, weight=2)
-        self.preferences.grid(row=0, column=0, columnspan=3, padx=(10, 10), pady=(10, 5), sticky=EW)
-
-        self.input_directory = FrameInputDirectory(self.panel)
-        self.input_directory.grid_columnconfigure(0, weight=0)
-        self.input_directory.grid_columnconfigure(1, weight=1)
-        self.input_directory.grid_columnconfigure(2, weight=0)
-        self.input_directory.grid(row=1, column=0, columnspan=3, padx=(10, 10), pady=(5, 5), sticky=EW)
-
-        self.output_directory = FrameOutputDirectory(self.panel)
-        self.output_directory.grid_columnconfigure(0, weight=0)
-        self.output_directory.grid_columnconfigure(1, weight=1)
-        self.output_directory.grid_columnconfigure(2, weight=0)
-        self.output_directory.grid(row=2, column=0, columnspan=3, padx=(10, 10), pady=(5, 5), sticky=EW)
+        self.output_directory = FrameOutputDirectory(self)
+        self.output_directory.grid(row=2, column=0, columnspan=2, padx=10, pady=5, sticky=tk.EW)
 
         self.subprocess_output = SubprocessOutput(self)
-        self.subprocess_output.grid(row=4, column=0, columnspan=3, rowspan=1, padx=(10, 10), pady=(5, 5), sticky=NSEW)
+        self.subprocess_output.grid(row=3, column=0, columnspan=2, padx=10, pady=5, sticky=tk.NSEW)
 
-        self.start_button = ttk.Button(self,
-                                       text="Beck-View-Movie starten",
-                                       style="Beck-View_Movie-GUI.TButton",
-                                       command=self.start_digitization)
-        self.start_button.grid(row=5, column=0, columnspan=1, padx=(10, 10), pady=(5, 10), sticky=EW)
+        self.start_button = ttk.Button(self, text="Beck-View-Movie starten",
+                                       style="beck-view-movie-gui.TButton",
+                                       command=self.start_movie)
+        self.start_button.grid(row=4, column=0, padx=10, pady=(5, 10), sticky=tk.EW)
 
-        self.stop_button = ttk.Button(self,
-                                      text="Beck-View-Movie stoppen",
-                                      style="Beck-View_Movie-GUI.TButton",
-                                      command=self.stop_digitization)
-        self.stop_button.grid(row=5, column=1, columnspan=1, padx=(10, 10), pady=(5, 10), sticky=EW)
+        self.stop_button = ttk.Button(self, text="Beck-View-Movie stoppen",
+                                      style="beck-view-movie-gui.TButton",
+                                      command=self.stop_movie,
+                                      state="disabled")
+        self.stop_button.grid(row=4, column=1, padx=10, pady=(5, 10), sticky=tk.EW)
 
-        # Configure grid weights
-        self.grid_rowconfigure(4, weight=2)
+        self.grid_rowconfigure(3, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
-        # Create asyncio event loop
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
+        self.process: subprocess.Popen | None = None
+        self.output_queue: queue.Queue = queue.Queue()
 
-        # Store reference to subprocess
-        self.process = None
-        self.output_task: Task
+    # ------------------------------------------------------------------ helpers
+    def log(self, text: str):
+        self.subprocess_output.append(text)
 
-    async def read_subprocess_output(self, process: asyncio.subprocess.Process):
-        # Asynchronously read subprocess output
-        while True:
-            line = await process.stdout.readline()
-            if not line:
-                break
-            self.subprocess_output.text_output.insert(tkinter.END, line.decode())
-            self.subprocess_output.text_output.see(tkinter.END)
+    def is_running(self) -> bool:
+        return self.process is not None and self.process.poll() is None
 
-    def start_digitization(self):
-        self.subprocess_output.text_output.insert(tkinter.END, "Beck-View_Movie - Starte Filmgenerierung...\n")
+    def _set_running_state(self, running: bool):
+        self.start_button.configure(state="disabled" if running else "normal")
+        self.stop_button.configure(state="normal" if running else "disabled")
 
-        async def run_digitization():
-            filepath = Path.home().joinpath('PycharmProjects',
-                                            'beck-view-movie',
-                                            'assemble-film.cmd' if self.windows else 'beck-view-movie')
+    def build_command(self) -> list[str]:
+        prefs = self.preferences
+        timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M")
+        quality = prefs.quality.get()
+        fps = prefs.fps_var.get()
+        name = f"{self.output_directory.get_filename()}_{quality}_{fps}fps_{timestamp}"
 
-            timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M")
+        film_resolution = prefs.film_resolution.get()
+        if film_resolution != "automatic":
+            film_resolution = film_resolution.replace(" ", "")
 
-            quality = self.preferences.quality.get()
-            fps = self.preferences.fps.get()
-            name = str(f"{self.output_directory.filename.get()}_{quality}_{fps}fps_{timestamp}")
+        command = [
+            str(BECK_VIEW_MOVIE_PATH),
+            f"--input-path={self.input_directory.get()}",
+            f"--output-path={self.output_directory.get_path()}",
+            f"--name={name}",
+            f"--output-format={prefs.film_wrapper.get()}",
+            f"--quality={quality}",
+            f"--width-height={film_resolution}",
+            f"--frames-per-second={fps}",
+        ]
+        if prefs.flip_vertical.get():
+            command.append("--flip-vertical")
+        if prefs.flip_horizontal.get():
+            command.append("--flip-horizontal")
 
-            film_resolution = self.preferences.film_resolution.get()
-            if film_resolution != "automatic":
-                film_resolution = film_resolution.get().replace(' ', '')
+        tonemap_preset = prefs.film_tonemap.get()
+        if tonemap_preset != Preferences.TONEMAP_NONE:
+            command.append(f"--tone-mapper-preset={tonemap_preset}")
+            command.append("--bracketing")
 
-            command = [
-                str(filepath),
-                f"--input-path={self.input_directory.input_directory_path.get()}",
-                f"--output-path={self.output_directory.output_directory_path.get()}",
-                f"--name={name}",
-                f"--output-format={self.preferences.film_wrapper.get()}",
-                f"--quality={quality}",
-                f"--width-height={film_resolution}",
-                f"--frames-per-second={fps}"
-            ]
-            if self.preferences.flip_vertical.get():
-                command.append("--flip-vertical")
-            if self.preferences.flip_horizontal.get():
-                command.append("--flip-horizontal")
+        command.append("--gui")
+        return command
 
-            tonemap_preset = self.preferences.film_tonemap.get()
-            if tonemap_preset != "kein Tone-Mapping":
-                command.append(f"--tone-mapper-preset={tonemap_preset}")
-                command.append(f"--bracketing")
+    # ------------------------------------------------------------------ start
+    def start_movie(self):
+        if self.is_running():
+            self.log("Beck-View-Movie-GUI - Beck-View-Movie läuft bereits!\n")
+            return
 
-            command.append("--gui")
+        self.log("Beck-View-Movie-GUI - Starte Filmgenerierung...\n")
 
-            self.subprocess_output.text_output.insert(tkinter.END,
-                                                      f"Beck-View_Movie - Beck-View-Movie wird mit folgenden Parametern gestartet: {command}\n")
-            try:
-                if self.windows:
-                    self.process = await asyncio.create_subprocess_exec(
-                        *command,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE,
-                        creationflags=subprocess.REALTIME_PRIORITY_CLASS | subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
-                    )
-                else:
-                    self.process = await asyncio.create_subprocess_exec(
-                        *command,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE,
-                        preexec_fn=os.setpgrp
-                    )
+        if not BECK_VIEW_MOVIE_PATH.exists():
+            self.log(f"Beck-View-Movie-GUI - Programm nicht gefunden: {BECK_VIEW_MOVIE_PATH}\n")
+            return
+        if not Path(self.input_directory.get()).is_dir():
+            self.log(f"Beck-View-Movie-GUI - Eingabeverzeichnis existiert nicht: "
+                     f"{self.input_directory.get()}\n")
+            return
 
-                # Start reading subprocess output asynchronously
-                self.output_task = self.loop.create_task(self.read_subprocess_output(self.process))
+        command = self.build_command()
+        self.log("Beck-View-Movie-GUI - Beck-View-Movie wird mit folgenden Parametern "
+                 f"gestartet: {command}\n")
 
-                # Wait for the process to finish
-                await self.process.wait()
-                await self.output_task
-
-                self.subprocess_output.text_output.insert(tkinter.END,
-                                                          f"Beck-View_Movie - Beck-View-Movie wurde mit Return-Code '{self.process.returncode}' beendet. \n")
-                self.process = None
-
-            except Exception as e:
-                self.subprocess_output.text_output.insert(tkinter.END,
-                                                          f"Beck-View_Movie - Error starting subprocess: {e}\n")
-            finally:
-                self.subprocess_output.text_output.see(tkinter.END)
-
-        self.loop.create_task(run_digitization())
-
-    def stop_digitization(self):
-        if self.process:
-            self.subprocess_output.text_output.insert(tkinter.END,
-                                                      "Beck-View_Movie - Stoppe Beck-View-Digitize ...\n")
-            try:
-                if not self.output_task.cancelled():
-                    self.subprocess_output.text_output.insert(tkinter.END,
-                                                              "Beck-View_Movie - Beende Ausgabe von Nachrichten gesendet von Beck-View-Movie ...\n")
-                    self.output_task.cancel()
-
-                if self.windows:
-                    self.process.send_signal(signal.CTRL_BREAK_EVENT)
-                else:
-                    self.process.terminate()
-
-                time.sleep(1)
-
-                self.subprocess_output.text_output.insert(tkinter.END,
-                                                          "Beck-View_Movie - Beck-View-Movie gestoppt!\n")
-                self.process = None
-            except Exception as e:
-                self.subprocess_output.text_output.insert(tkinter.END,
-                                                          f"Beck-View_Movie - Fehler beim Stoppen von Beck-View-Movie: {e}\n")
-            finally:
-                self.subprocess_output.text_output.see(tkinter.END)
+        popen_kwargs: dict = dict(
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,  # stderr in denselben Strom, sonst Pipe-Stau
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            bufsize=1,
+        )
+        if IS_WINDOWS:
+            popen_kwargs["creationflags"] = (subprocess.HIGH_PRIORITY_CLASS
+                                             | subprocess.CREATE_NEW_PROCESS_GROUP
+                                             | subprocess.CREATE_NO_WINDOW)
         else:
-            self.subprocess_output.text_output.insert(tkinter.END,
-                                                      "Beck-View_Movie - Kein laufender Prozess 'Beck-View-Movie' gefunden!\n")
-            self.subprocess_output.text_output.see(tkinter.END)
+            popen_kwargs["start_new_session"] = True
+
+        try:
+            self.process = subprocess.Popen(command, **popen_kwargs)
+        except OSError as e:
+            self.log(f"Beck-View-Movie-GUI - Fehler beim Starten des Subprozesses: {e}\n")
+            self.process = None
+            return
+
+        self.output_queue = queue.Queue()
+        threading.Thread(target=self._reader_thread,
+                         args=(self.process, self.output_queue),
+                         daemon=True).start()
+
+        self._set_running_state(True)
+        self.after(50, self._poll_output)
+
+    @staticmethod
+    def _reader_thread(process: subprocess.Popen, out_queue: queue.Queue):
+        """Läuft im Hintergrund: liest zeilenweise und meldet am Ende den Return-Code."""
+        try:
+            assert process.stdout is not None
+            for line in process.stdout:
+                out_queue.put(("line", line))
+        finally:
+            out_queue.put(("done", process.wait()))
+
+    def _poll_output(self):
+        """Läuft im GUI-Thread: leert die Queue und aktualisiert das Textfeld."""
+        finished = False
+        for _ in range(self.MAX_LINES_PER_TICK):
+            try:
+                kind, payload = self.output_queue.get_nowait()
+            except queue.Empty:
+                break
+            if kind == "line":
+                self.log(payload)
+            else:
+                self.log(f"Beck-View-Movie-GUI - Beck-View-Movie wurde mit Return-Code "
+                         f"'{payload}' beendet.\n")
+                finished = True
+                break
+
+        if finished:
+            self.process = None
+            self._set_running_state(False)
+        else:
+            self.after(50, self._poll_output)
+
+    # ------------------------------------------------------------------- stop
+    def stop_movie(self):
+        if not self.is_running():
+            self.log("Beck-View-Movie-GUI - Kein laufender Prozess 'Beck-View-Movie' gefunden!\n")
+            return
+
+        self.log("Beck-View-Movie-GUI - Stoppe Beck-View-Movie ...\n")
+        self.terminate_process()
+
+    def terminate_process(self):
+        process = self.process
+        if process is None or process.poll() is not None:
+            return
+        try:
+            if IS_WINDOWS:
+                process.send_signal(signal.CTRL_BREAK_EVENT)
+            else:
+                process.terminate()
+        except OSError as e:
+            self.log(f"Beck-View-Movie-GUI - Fehler beim Stoppen von Beck-View-Movie: {e}\n")
+            return
+        # Reagiert der Prozess nicht, nach 5 s hart beenden
+        self.after(5000, self._force_kill, process)
+
+    def _force_kill(self, process: subprocess.Popen):
+        if process.poll() is None:
+            self.log("Beck-View-Movie-GUI - Prozess reagiert nicht, wird beendet (kill).\n")
+            try:
+                process.kill()
+            except OSError:
+                pass
 
 
-class Application(ttk.Window):
+class Application(BaseWindow):
     def __init__(self):
-        super().__init__(themename="superhero")
+        if ThemedTk is not None:
+            # themebg=True: Fensterhintergrund passt zum gewählten Theme (wichtig bei dunklen Themes)
+            super().__init__(theme=THEME_NAME, themebg=True)
+        else:
+            print("ttkthemes nicht installiert - verwende Standard-Theme.", file=sys.stderr)
+            super().__init__()
 
-        self.windows = platform.system() == "Windows"
-
+        self.title("Beck View Filmgenerator")
         self.minsize(width=1400, height=840)
         self.geometry("1400x840")
-        self.title("Beck View Movie GUI")
         self.option_add("*tearOff", False)
+        # größere Schrift in der Auswahlliste der Comboboxen
+        self.option_add("*TCombobox*Listbox.font", BECK_VIEW_FONT)
 
-        if sys.platform.startswith("win"):
-            self.iconbitmap("beck-view-movie-gui.ico")
-        else:
-            logo = tkinter.PhotoImage(file="beck-view-movie-logo.png")
-            self.iconphoto(True, logo)
+        self._setup_styles()  # eigene Styles erst nach dem Theme setzen
+        self._setup_icon()
 
         self.menu = MainMenu(self)
         self.config(menu=self.menu)
 
-        self.layout = GroupLayout(self, self.windows)
-        self.layout.pack(fill=BOTH, expand=YES)
+        self.layout = GroupLayout(self)
+        self.layout.pack(fill="both", expand=True)
 
-        # Integrate asyncio event loop with Tkinter
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
-        self.loop = self.layout.loop
-        self.update_loop()
+    @staticmethod
+    def _setup_styles():
+        style = ttk.Style()
+        style.configure("beck-view-movie-gui.TButton", font=BECK_VIEW_FONT)
+        style.configure("beck-view-movie-gui.TCheckbutton", font=BECK_VIEW_FONT)
 
-    def update_loop(self):
-        self.loop.call_soon(self.loop.stop)
-        self.loop.run_forever()
-        self.after(100, self.update_loop)
+    def _setup_icon(self):
+        try:
+            if sys.platform.startswith("win"):
+                icon_file = find_asset("beck-view-movie-gui.ico")
+                if icon_file:
+                    self.iconbitmap(str(icon_file))
+            else:
+                icon_file = find_asset("beck-view-movie-logo.png")
+                if icon_file:
+                    self._icon = tk.PhotoImage(file=str(icon_file))
+                    self.iconphoto(True, self._icon)
+        except tk.TclError:
+            pass  # Icon fehlt oder wird nicht unterstützt - nicht kritisch
 
     def on_closing(self):
-        self.loop.call_soon(self.loop.stop)
-        self.loop.close()
+        if self.layout.is_running():
+            if not messagebox.askokcancel(
+                    "Beenden",
+                    "Beck-View-Movie läuft noch.\nProzess stoppen und Programm beenden?",
+                    parent=self):
+                return
+            self.layout.terminate_process()
         self.destroy()
 
 
 if __name__ == "__main__":
-    app = Application()
-    app.mainloop()
+    Application().mainloop()

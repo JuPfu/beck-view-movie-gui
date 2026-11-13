@@ -182,7 +182,7 @@ class FrameOutputDirectory(ttk.Labelframe):
 class Preferences(ttk.Labelframe):
     FILM_WRAPPERS = ["mov", "mp4"]
     FILM_RESOLUTIONS = [
-        "automatisch",
+        "automatic",
         "1600 x 1200",
         "1920 x 1080",
         "2048 x 1536",
@@ -249,7 +249,7 @@ class Preferences(ttk.Labelframe):
         self.film_resolution.current(0)
         ToolTip(self.film_resolution,
                 "Auflösung in horizontaler und vertikaler Richtung. "
-                "'automatisch' ermittelt die Auflösung selbständig.")
+                "'automatic' ermittelt die Auflösung selbständig.")
 
         # Qualität
         ttk.Label(self.panel, font=BECK_VIEW_FONT, text="Qualität des Films").grid(
@@ -397,7 +397,7 @@ class GroupLayout(ttk.Frame):
         name = f"{self.output_directory.get_filename()}_{quality}_{fps}fps_{timestamp}"
 
         film_resolution = prefs.film_resolution.get()
-        if film_resolution != "automatisch":
+        if film_resolution != "automatic":
             film_resolution = film_resolution.replace(" ", "")
 
         command = [

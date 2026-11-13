@@ -37,6 +37,10 @@ BECK_VIEW_MOVIE_PATH = Path.home().joinpath(
 )
 DEFAULT_DIR = Path("~", "Filme").expanduser()
 
+# Muster, mit dem die GUI vor dem Start prüft, ob im Eingabeverzeichnis Bilder liegen.
+# Bei Bedarf an das Muster anpassen, mit dem Beck-View-Movie seine Einzelbilder sucht.
+FRAME_PATTERN = "*.png"
+
 BaseWindow = ThemedTk if ThemedTk is not None else tk.Tk
 
 
@@ -84,7 +88,7 @@ class ToolTip:
         border = tk.Frame(self.tip, background="black", padx=1, pady=1)
         border.pack()
         tk.Label(border, text=self.text, justify="left", background="#ffffe0",
-                 foreground="black", font=("Helvetica", 12), wraplength=420,
+                 foreground="black", font=("Helvetica", 11), wraplength=420,
                  borderwidth=0).pack(padx=0, pady=0, ipadx=pad_x, ipady=pad_y)
 
     def hide(self, _event=None):
@@ -438,6 +442,10 @@ class GroupLayout(ttk.Frame):
             self.log(f"Beck-View-Movie-GUI - Eingabeverzeichnis existiert nicht: "
                      f"{self.input_directory.get()}\n")
             return
+        if not any(Path(self.input_directory.get()).glob(FRAME_PATTERN)):
+            self.log(f"Beck-View-Movie-GUI - Im Eingabeverzeichnis wurden keine Bilder "
+                     f"('{FRAME_PATTERN}') gefunden: {self.input_directory.get()}\n")
+            return
 
         command = self.build_command()
         self.log("Beck-View-Movie-GUI - Beck-View-Movie wird mit folgenden Parametern "
@@ -547,7 +555,7 @@ class Application(BaseWindow):
             print("ttkthemes nicht installiert - verwende Standard-Theme.", file=sys.stderr)
             super().__init__()
 
-        self.title("Beck View Filmgenerator")
+        self.title("Beck View Movie GUI")
         self.minsize(width=1400, height=840)
         self.geometry("1400x840")
         self.option_add("*tearOff", False)
